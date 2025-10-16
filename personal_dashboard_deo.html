@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Deo — Tableau-style Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--accent:#0d6efd;--accent-2:#6610f2;--card-bg:#ffffff}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:#f3f6fb;margin:0}
+    .container-full{padding:18px}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+    .profile-pic{width:120px;height:120px;border-radius:12px;object-fit:cover;border:5px solid white;box-shadow:0 10px 30px rgba(12,24,50,0.15)}
+    .kpi{background:var(--card-bg);border-radius:8px;padding:12px;box-shadow:0 6px 18px rgba(12,24,50,0.04);}
+    .side-panel{background:linear-gradient(180deg,#ffffff,#fbfdff);border-radius:10px;padding:14px;box-shadow:0 6px 18px rgba(12,24,50,0.04)}
+    .section-title{font-weight:700;font-size:0.95rem;margin-bottom:8px}
+    .filters .form-control{border-radius:8px}
+    .chart-card{background:var(--card-bg);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(12,24,50,0.05);}
+    .footer-note{font-size:0.85rem;color:#6c757d;margin-top:12px}
+  </style>
+</head>
+<body>
+  <div class="container-fluid container-full">
+    <header>
+      <img id="profileImg" class="profile-pic" src="deo.jpeg" alt="Deo">
+      <div>
+        <h3 style="margin:0">Adeola (Deo) Ekundayo</h3>
+        <div style="color:#6c757d">Charlotte, NC — 🎧 Music 🏀 🏈 Sports & 📊 Data</div>
+      </div>
+      <div class="ms-auto d-flex gap-2">
+        <button id="resetFilters" class="btn btn-outline-secondary">Reset Filters</button>
+        <button id="downloadPNG" class="btn btn-primary">Export PNG</button>
+      </div>
+    </header>
+
+    <div class="row g-3">
+      <div class="col-lg-3">
+        <div class="side-panel">
+          <div class="section-title">Spotify</div>
+          <div>
+            <input id="spotifyInput" class="form-control mb-2" placeholder="Paste Spotify playlist URL">
+            <button id="embedBtn" class="btn btn-sm btn-outline-primary w-100">Embed Playlist</button>
+            <div id="spotifyEmbedWrap" style="margin-top:10px; max-width: 100%; overflow: hidden;"></div>
+          </div>
+
+          
+        </div>
+      </div>
+
+      <div class="col-lg-9">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="kpi text-center">
+              <div style="font-size:0.9rem;color:#6c757d">Current Temperature</div>
+              <div id="kpiCurrentTemp" style="font-size:1.6rem;font-weight:700">Loading...</div>
+              <div style="font-size:0.85rem;color:#888">Charlotte, NC</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi text-center">
+              <div style="font-size:0.9rem;color:#6c757d">Favorite Interest</div>
+              <div style="font-size:1.2rem;font-weight:700">Music & Sports</div>
+              <div style="font-size:0.85rem;color:#888">Playlists & Scores</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="kpi text-center" style="position:relative">
+              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.08)">
+                <option value="all">All</option>
+                <option value="NFL">NFL</option>
+                <option value="NBA">NBA</option>
+              </select>
+              <div style="font-size:0.9rem;color:#6c757d">Score Ticker</div>
+              <div id="liveTicker" style="font-size:1.05rem;font-weight:700">Loading scores...</div>
+              <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754">Live ESPN scoreboard</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="chart-card" style="height: 500px; position: relative;">
+              <div class="small-muted" style="position: absolute; top: 12px; right: 12px; font-size: 0.8rem;">Hover a point to see the day</div>
+              <div class="d-flex align-items-start mb-3" style="margin-top: 8px;">
+                <div>
+                  <div class="section-title">Monthly Weather — Daily Highs & Lows</div>
+                  <div style="color:#6c757d;font-size:0.9rem; margin-bottom: 8px;">Charlotte, selected month</div>
+                  <label class="small-muted" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Select Month:</label>
+                  <select id="monthSelect" class="form-select mb-2" style="width: 200px; font-size: 0.85rem;">
+                  </select>
+                </div>
+              </div>
+              <div style="height: 330px; position: relative;">
+                <canvas id="weatherChartLarge" style="max-height: 100%; width: 100%;"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12" style="margin-top: 20px;">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="chart-card" style="height:540px">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="section-title">NFL Snapshot</div>
+                    <button id="refreshNFL" class="btn btn-sm btn-outline-primary">Refresh</button>
+                  </div>
+                  <div id="nflSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NFL standings from ESPN API</div>
+                  <input id="nflSearch" class="form-control form-control-sm mb-2" placeholder="Search NFL teams..." style="font-size:0.85rem">
+                  <div style="overflow:auto;max-height:420px">
+                    <table class="table table-sm">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr></thead>
+                      <tbody id="nflBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="chart-card" style="height:540px">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="section-title">NBA Snapshot</div>
+                    <button id="refreshNBA" class="btn btn-sm btn-outline-primary">Refresh</button>
+                  </div>
+                  <div id="nbaSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NBA standings from ESPN API</div>
+                  <input id="nbaSearch" class="form-control form-control-sm mb-2" placeholder="Search NBA teams..." style="font-size:0.85rem">
+                  <div style="overflow:auto;max-height:420px">
+                    <table class="table table-sm">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>PTS</th><th>OPP</th></tr></thead>
+                      <tbody id="nbaBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <div class="col-12" id="teamSearchResults" style="display:none">
+            <div class="chart-card">
+              <div class="section-title" id="teamSearchTitle">Team Search Results</div>
+              <div style="font-size:0.85rem;color:#6c757d;margin-bottom:8px" id="teamSearchSubtitle">Current season stats</div>
+              <div id="teamStatsDisplay"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ---------- Initialization & Sample Data ----------
+    const monthSelect = document.getElementById('monthSelect');
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    months.forEach((m,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.text=m; monthSelect.appendChild(opt); });
+    // default to current month
+    const now=new Date(); monthSelect.value = now.getMonth();
+
+    // OpenWeatherMap API configuration
+    const WEATHER_API_KEY = 'demo'; // Using demo key - replace with your actual API key
+    const CHARLOTTE_COORDS = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC coordinates
+
+    // Fetch current temperature for Charlotte using free weather API
+    async function fetchCurrentTemperature() {
+      try {
+        console.log('Fetching current temperature for Charlotte...');
+        
+        // Try wttr.in (free weather service, no API key required)
+        const wttrUrl = 'https://wttr.in/Charlotte,NC?format=j1';
+        
+        try {
+          const response = await fetch(wttrUrl, {
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Weather data received:', data);
+            
+            if (data.current_condition && data.current_condition[0]) {
+              const current = data.current_condition[0];
+              const currentTemp = parseInt(current.temp_F);
+              const weatherDescription = current.weatherDesc[0].value;
+              const feelsLike = parseInt(current.FeelsLikeF);
+              const humidity = parseInt(current.humidity);
+              const windSpeed = parseInt(current.windspeedMiles);
+              
+              return { 
+                currentTemp, 
+                weatherDescription, 
+                source: 'Live API (wttr.in)',
+                feelsLike,
+                humidity,
+                windSpeed
+              };
+            }
+          }
+        } catch (apiError) {
+          console.log('wttr.in API failed:', apiError.message);
+        }
+        
+        // Try alternative free API - Open-Meteo (no API key required)
+        try {
+          const meteoUrl = `https://api.open-meteo.com/v1/current?latitude=${CHARLOTTE_COORDS.lat}&longitude=${CHARLOTTE_COORDS.lon}&current_weather=true&temperature_unit=fahrenheit`;
+          
+          const response = await fetch(meteoUrl);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Open-Meteo data received:', data);
+            
+            if (data.current_weather) {
+              const current = data.current_weather;
+              const currentTemp = Math.round(current.temperature);
+              
+              return { 
+                currentTemp, 
+                weatherDescription: 'Current Conditions',
+                source: 'Live API (Open-Meteo)',
+                feelsLike: currentTemp,
+                humidity: 50, // Not provided by this API
+                windSpeed: Math.round(current.windspeed * 0.621371) // Convert km/h to mph
+              };
+            }
+          }
+        } catch (meteoError) {
+          console.log('Open-Meteo API failed:', meteoError.message);
+        }
+        
+        // Fallback to realistic current temperature
+        return generateCurrentTemperatureFallback();
+        
+      } catch (error) {
+        console.log('Current temperature fetch failed:', error.message);
+        return generateCurrentTemperatureFallback();
+      }
+    }
+
+    // Generate realistic current temperature fallback
+    function generateCurrentTemperatureFallback() {
+      const now = new Date();
+      const month = now.getMonth();
+      const hour = now.getHours();
+      
+      // Charlotte's typical temperatures by month (based on historical data)
+      const monthlyAverages = [
+        48, 52, 61, 71, 79, 86, 89, 87, 81, 71, 61, 52 // Jan-Dec averages
+      ];
+      
+      const baseTemp = monthlyAverages[month];
+      
+      // Add daily temperature variation (warmer during day, cooler at night)
+      const dailyVariation = Math.sin((hour / 24) * Math.PI * 2) * 8; // ±8°F daily variation
+      const randomVariation = (Math.random() - 0.5) * 6; // ±3°F random
+      
+      const currentTemp = Math.round(baseTemp + dailyVariation + randomVariation);
+      const feelsLike = Math.round(currentTemp + (Math.random() - 0.5) * 4); // ±2°F from actual
+      
+      return { 
+        currentTemp, 
+        weatherDescription: 'Partly Cloudy',
+        source: 'Charlotte Climate Model',
+        feelsLike,
+        humidity: Math.floor(Math.random() * 40) + 40, // 40-80%
+        windSpeed: Math.floor(Math.random() * 10) + 2 // 2-12 mph
+      };
+    }
+
+    // Fetch real monthly weather data from Open-Meteo API
+    async function fetchMonthlyHighs(year, month) {
+      try {
+        console.log(`Fetching monthly weather data for ${year}-${month+1}...`);
+        
+        const daysInMonth = new Date(year, month+1, 0).getDate();
+        const startDate = `${year}-${String(month+1).padStart(2, '0')}-01`;
+        const endDate = `${year}-${String(month+1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+        
+        const today = new Date();
+        const selectedMonth = new Date(year, month);
+        const isPastMonth = selectedMonth < new Date(today.getFullYear(), today.getMonth());
+        const isCurrentMonth = selectedMonth.getFullYear() === today.getFullYear() && 
+                               selectedMonth.getMonth() === today.getMonth();
+        
+        let apiUrl;
+        
+        if (isPastMonth) {
+          // Use historical weather API for past months
+          apiUrl = `https://archive-api.open-meteo.com/v1/archive?latitude=${CHARLOTTE_COORDS.lat}&longitude=${CHARLOTTE_COORDS.lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/New_York`;
+        } else {
+          // Use forecast API for current/future months (limited to 16 days)
+          apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${CHARLOTTE_COORDS.lat}&longitude=${CHARLOTTE_COORDS.lon}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America/New_York&forecast_days=16`;
+        }
+        
+        const response = await fetch(apiUrl);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Monthly weather data received:', data);
+          
+          const labels = [];
+          const highs = [];
+          const lows = [];
+          
+          if (data.daily && data.daily.time && data.daily.temperature_2m_max) {
+            // Parse API response
+            const times = data.daily.time;
+            const temperaturesHigh = data.daily.temperature_2m_max;
+            const temperaturesLow = data.daily.temperature_2m_min;
+            
+            if (isPastMonth) {
+              // For past months, use all available data
+              times.forEach((dateStr, index) => {
+                const date = new Date(dateStr);
+                labels.push(`${date.getMonth()+1}/${date.getDate()}`);
+                highs.push(Math.round(temperaturesHigh[index]));
+                lows.push(Math.round(temperaturesLow[index]));
+              });
+            } else if (isCurrentMonth) {
+              // For current month, combine historical + forecast
+              const currentDay = today.getDate();
+              
+              // Fill in available forecast data
+              times.forEach((dateStr, index) => {
+                const date = new Date(dateStr);
+                if (date.getMonth() === month) {
+                  labels.push(`${date.getMonth()+1}/${date.getDate()}`);
+                  highs.push(Math.round(temperaturesHigh[index]));
+                  lows.push(Math.round(temperaturesLow[index]));
+                }
+              });
+              
+              // If we don't have full month, fill remaining with estimates
+              if (labels.length < daysInMonth) {
+                const avgHigh = highs.reduce((a, b) => a + b, 0) / highs.length;
+                const avgLow = lows.reduce((a, b) => a + b, 0) / lows.length;
+                for (let d = labels.length + 1; d <= daysInMonth; d++) {
+                  labels.push(`${month+1}/${d}`);
+                  highs.push(Math.round(avgHigh + (Math.random() - 0.5) * 8));
+                  lows.push(Math.round(avgLow + (Math.random() - 0.5) * 8));
+                }
+              }
+            } else {
+              // Future month - use forecast data available
+              times.forEach((dateStr, index) => {
+                const date = new Date(dateStr);
+                if (date.getMonth() === month && date.getFullYear() === year) {
+                  labels.push(`${date.getMonth()+1}/${date.getDate()}`);
+                  highs.push(Math.round(temperaturesHigh[index]));
+                  lows.push(Math.round(temperaturesLow[index]));
+                }
+              });
+              
+              // Fill remaining days with climate averages
+              if (labels.length < daysInMonth) {
+                const monthlyAveragesHigh = [48, 52, 61, 71, 79, 86, 89, 87, 81, 71, 61, 52];
+                const monthlyAveragesLow = [28, 32, 40, 50, 58, 65, 68, 67, 60, 50, 40, 32];
+                const baseHigh = monthlyAveragesHigh[month];
+                const baseLow = monthlyAveragesLow[month];
+                
+                for (let d = labels.length + 1; d <= daysInMonth; d++) {
+                  labels.push(`${month+1}/${d}`);
+                  highs.push(Math.round(baseHigh + (Math.random() - 0.5) * 12));
+                  lows.push(Math.round(baseLow + (Math.random() - 0.5) * 12));
+                }
+              }
+            }
+            
+            return { labels, highs, lows, source: isPastMonth ? 'Historical API' : 'Forecast API', isLive: true };
+          }
+        }
+        
+        // Fallback to generated data if API fails
+        console.log('API fetch failed, using fallback data');
+        return genMonthlyHighsFallback(year, month);
+        
+      } catch (error) {
+        console.log('Monthly weather fetch error:', error.message);
+        return genMonthlyHighsFallback(year, month);
+      }
+    }
+
+    // Fallback function for sample weather data (uses pseudo-random but stable seed per month)
+    function genMonthlyHighsFallback(year, month){
+      const days = new Date(year, month+1, 0).getDate();
+      const labels = []; const highs = []; const lows = [];
+      let seed = year*100+month;
+      for(let d=1; d<=days; d++){
+        labels.push(`${month+1}/${d}`);
+        // simple deterministic pseudo-random using seed
+        seed = (seed * 9301 + 49297) % 233280;
+        const rnd = seed / 233280;
+        const base = 65 + Math.floor(15 * Math.sin((month/11)*Math.PI));
+        const high = Math.round(base + rnd*18);
+        const low = Math.round(base - 15 + rnd*12); // lows are typically 10-20°F lower
+        highs.push(high);
+        lows.push(low);
+      }
+      return {labels, highs, lows, source: 'Climate Model', isLive: false};
+    }
+
+    // Weather chart
+    const wctx = document.getElementById('weatherChartLarge');
+    const weatherChart = new Chart(wctx, {
+      type: 'line',
+      data: { 
+        labels: [], 
+        datasets:[
+          {label:'Daily High (°F)', data:[], tension:0.3, fill:true, backgroundColor:'rgba(13,110,253,0.08)', borderColor:'rgba(13,110,253,1)', pointRadius:3},
+          {label:'Daily Low (°F)', data:[], tension:0.3, fill:false, borderColor:'rgba(220,53,69,1)', pointRadius:3, pointBackgroundColor:'rgba(220,53,69,1)', pointBorderColor:'rgba(220,53,69,1)'}
+        ] 
+      },
+      options: {plugins:{legend:{display:true}}, scales:{y:{beginAtZero:false}}}
+    });
+
+    async function refreshWeather(){
+      const m = parseInt(monthSelect.value,10);
+      const y = new Date().getFullYear();
+      
+      // Update current temperature KPI
+      const kpiElement = document.getElementById('kpiCurrentTemp');
+      kpiElement.innerText = 'Loading...';
+      
+      try {
+        const currentWeather = await fetchCurrentTemperature();
+        kpiElement.innerText = currentWeather.currentTemp + ' °F';
+        
+        // Update the subtitle to show weather info
+        const subtitle = document.querySelector('#kpiCurrentTemp').nextElementSibling;
+        if (subtitle && currentWeather.source) {
+          subtitle.textContent = `${currentWeather.weatherDescription} • ${currentWeather.source}`;
+          subtitle.style.color = currentWeather.source.includes('Live API') ? '#198754' : '#6c757d';
+        }
+      } catch (error) {
+        console.log('Current temperature fetch failed:', error);
+        kpiElement.innerText = 'Error';
+      }
+      
+      // Update weather chart with live data
+      const data = await fetchMonthlyHighs(y, m);
+      weatherChart.data.labels = data.labels;
+      weatherChart.data.datasets[0].data = data.highs;
+      weatherChart.data.datasets[1].data = data.lows;
+      weatherChart.update();
+      
+      // Update chart subtitle to show data source
+      const chartSubtitle = document.querySelector('.chart-card .section-title').nextElementSibling;
+      if (chartSubtitle && data.source) {
+        const monthName = months[m];
+        if (data.isLive) {
+          chartSubtitle.innerHTML = `Charlotte, ${monthName} • <span style="color:#198754">Live Data (${data.source})</span>`;
+        } else {
+          chartSubtitle.innerHTML = `Charlotte, ${monthName} • <span style="color:#6c757d">Simulated (${data.source})</span>`;
+        }
+      }
+    }
+
+
+    // Live sports data storage
+    let liveNflData = null;
+    let liveNbaData = null;
+
+    // Sample fallback data
+    const nflSample = [
+      {team:'Eagles',w:6,l:1,pf:198,pa:140},
+      {team:'Bengals',w:5,l:2,pf:172,pa:150},
+      {team:'Bills',w:5,l:2,pf:180,pa:148},
+      {team:'49ers',w:5,l:2,pf:165,pa:138}
+    ];
+
+    const nbaSample = [
+      {team:'Lakers',w:8,l:2,pts:112,opp:104},
+      {team:'Bucks',w:7,l:3,pts:110,opp:106},
+      {team:'Celtics',w:7,l:3,pts:111,opp:107},
+      {team:'Nuggets',w:6,l:4,pts:108,opp:105}
+    ];
+
+    // Fetch live NFL data from ESPN API
+    async function fetchLiveNflData() {
+      try {
+        console.log('Fetching live NFL data from ESPN API...');
+        
+        // Try ESPN NFL standings API (primary)
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('NFL API response received:', data);
+          
+          const standings = [];
+          
+          // Parse ESPN's complex data structure
+          if (data.children && data.children.length > 0) {
+            data.children.forEach(conference => {
+              if (conference.children) {
+                conference.children.forEach(division => {
+                  if (division.standings && division.standings.entries) {
+                    division.standings.entries.forEach(team => {
+                      const stats = team.stats || [];
+                      standings.push({
+                        team: team.team.displayName,
+                        w: parseInt(stats.find(s => s.name === 'wins')?.value || stats.find(s => s.abbreviation === 'W')?.value || 0),
+                        l: parseInt(stats.find(s => s.name === 'losses')?.value || stats.find(s => s.abbreviation === 'L')?.value || 0),
+                        pf: parseInt(stats.find(s => s.name === 'pointsFor')?.value || stats.find(s => s.abbreviation === 'PF')?.value || 0),
+                        pa: parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || stats.find(s => s.abbreviation === 'PA')?.value || 0)
+                      });
+                    });
+                  }
+                });
+              }
+            });
+          }
+          
+          if (standings.length > 0) {
+            // Sort by win percentage
+            standings.sort((a, b) => {
+              const aPct = a.w / (a.w + a.l || 1);
+              const bPct = b.w / (b.w + b.l || 1);
+              return bPct - aPct;
+            });
+            
+            liveNflData = standings; // Include all teams (32 NFL teams)
+            console.log(`Successfully fetched ${liveNflData.length} NFL teams`);
+            return liveNflData;
+          }
+        }
+      } catch (error) {
+        console.log('NFL primary API failed:', error.message);
+      }
+      
+      // Try alternative API
+      return await fetchNflAlternativeData();
+    }
+
+    // Alternative NFL data fetch method
+    async function fetchNflAlternativeData() {
+      try {
+        console.log('Trying alternative NFL data source (teams endpoint)...');
+        
+        // Fetch each team's record individually
+        const teamsResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (teamsResponse.ok) {
+          const teamsData = await teamsResponse.json();
+          console.log('NFL teams data received:', teamsData);
+          
+          const standings = [];
+          
+          if (teamsData.sports && teamsData.sports[0] && teamsData.sports[0].leagues) {
+            const league = teamsData.sports[0].leagues[0];
+            
+            if (league && league.teams) {
+              // Fetch detailed data for each team (all 32 NFL teams)
+              const teamPromises = league.teams.map(async (teamObj) => {
+                try {
+                  const teamId = teamObj.team.id;
+                  const detailResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${teamId}`, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (detailResponse.ok) {
+                    const teamDetail = await detailResponse.json();
+                    const record = teamDetail.team.record?.items?.[0];
+                    
+                    if (record && record.stats) {
+                      return {
+                        team: teamObj.team.displayName,
+                        w: parseInt(record.stats.find(s => s.name === 'wins')?.value || 0),
+                        l: parseInt(record.stats.find(s => s.name === 'losses')?.value || 0),
+                        pf: parseInt(record.stats.find(s => s.name === 'pointsFor')?.value || 0),
+                        pa: parseInt(record.stats.find(s => s.name === 'pointsAgainst')?.value || 0)
+                      };
+                    }
+                  }
+                } catch (err) {
+                  console.log(`Failed to fetch team ${teamObj.team.displayName}:`, err.message);
+                }
+                return null;
+              });
+              
+              const results = await Promise.all(teamPromises);
+              standings.push(...results.filter(r => r !== null));
+              
+              if (standings.length > 0) {
+                // Sort by win percentage
+                standings.sort((a, b) => {
+                  const aPct = a.w / (a.w + a.l || 1);
+                  const bPct = b.w / (b.w + b.l || 1);
+                  return bPct - aPct;
+                });
+                
+                liveNflData = standings;
+                console.log(`Alternative API fetched ${liveNflData.length} NFL teams`);
+                return liveNflData;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Alternative NFL data fetch failed:', error.message);
+      }
+      return null;
+    }
+
+    // Fetch live NBA data from ESPN API
+    async function fetchLiveNbaData() {
+      try {
+        console.log('Fetching live NBA data from ESPN API...');
+        
+        // Try ESPN NBA standings API (primary)
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('NBA API response received:', data);
+          
+          const standings = [];
+          
+          // Parse ESPN's NBA data structure
+          if (data.children && data.children.length > 0) {
+            data.children.forEach(conference => {
+              if (conference.children) {
+                conference.children.forEach(division => {
+                  if (division.standings && division.standings.entries) {
+                    division.standings.entries.forEach(team => {
+                      const stats = team.stats || [];
+                      
+                      // Calculate average points (try to find in stats, otherwise estimate)
+                      const gamesPlayed = parseInt(stats.find(s => s.name === 'gamesPlayed')?.value || stats.find(s => s.abbreviation === 'GP')?.value || 0);
+                      const pointsFor = parseInt(stats.find(s => s.name === 'pointsFor')?.value || 0);
+                      const pointsAgainst = parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || 0);
+                      
+                      const avgPts = gamesPlayed > 0 ? Math.round(pointsFor / gamesPlayed) : 105;
+                      const avgOpp = gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105;
+                      
+                      standings.push({
+                        team: team.team.displayName,
+                        w: parseInt(stats.find(s => s.name === 'wins')?.value || stats.find(s => s.abbreviation === 'W')?.value || 0),
+                        l: parseInt(stats.find(s => s.name === 'losses')?.value || stats.find(s => s.abbreviation === 'L')?.value || 0),
+                        pts: avgPts,
+                        opp: avgOpp
+                      });
+                    });
+                  }
+                });
+              }
+            });
+          }
+          
+          if (standings.length > 0) {
+            // Sort by win percentage
+            standings.sort((a, b) => {
+              const aPct = a.w / (a.w + a.l || 1);
+              const bPct = b.w / (b.w + b.l || 1);
+              return bPct - aPct;
+            });
+            
+            liveNbaData = standings; // Include all teams (30 NBA teams)
+            console.log(`Successfully fetched ${liveNbaData.length} NBA teams`);
+            return liveNbaData;
+          }
+        }
+      } catch (error) {
+        console.log('NBA primary API failed:', error.message);
+      }
+      
+      // Try alternative API
+      return await fetchNbaAlternativeData();
+    }
+
+    // Alternative NBA data fetch method
+    async function fetchNbaAlternativeData() {
+      try {
+        console.log('Trying alternative NBA data source (teams endpoint)...');
+        
+        // Fetch each team's record individually
+        const teamsResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams', {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (teamsResponse.ok) {
+          const teamsData = await teamsResponse.json();
+          console.log('NBA teams data received:', teamsData);
+          
+          const standings = [];
+          
+          if (teamsData.sports && teamsData.sports[0] && teamsData.sports[0].leagues) {
+            const league = teamsData.sports[0].leagues[0];
+            
+            if (league && league.teams) {
+              // Fetch detailed data for each team (all 30 NBA teams)
+              const teamPromises = league.teams.map(async (teamObj) => {
+                try {
+                  const teamId = teamObj.team.id;
+                  const detailResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamId}`, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (detailResponse.ok) {
+                    const teamDetail = await detailResponse.json();
+                    const record = teamDetail.team.record?.items?.[0];
+                    
+                    if (record && record.stats) {
+                      const gamesPlayed = parseInt(record.stats.find(s => s.name === 'gamesPlayed')?.value || 0);
+                      const pointsFor = parseInt(record.stats.find(s => s.name === 'pointsFor')?.value || 0);
+                      const pointsAgainst = parseInt(record.stats.find(s => s.name === 'pointsAgainst')?.value || 0);
+                      
+                      return {
+                        team: teamObj.team.displayName,
+                        w: parseInt(record.stats.find(s => s.name === 'wins')?.value || 0),
+                        l: parseInt(record.stats.find(s => s.name === 'losses')?.value || 0),
+                        pts: gamesPlayed > 0 ? Math.round(pointsFor / gamesPlayed) : 105,
+                        opp: gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105
+                      };
+                    }
+                  }
+                } catch (err) {
+                  console.log(`Failed to fetch team ${teamObj.team.displayName}:`, err.message);
+                }
+                return null;
+              });
+              
+              const results = await Promise.all(teamPromises);
+              standings.push(...results.filter(r => r !== null));
+              
+              if (standings.length > 0) {
+                // Sort by win percentage
+                standings.sort((a, b) => {
+                  const aPct = a.w / (a.w + a.l || 1);
+                  const bPct = b.w / (b.w + b.l || 1);
+                  return bPct - aPct;
+                });
+                
+                liveNbaData = standings;
+                console.log(`Alternative API fetched ${liveNbaData.length} NBA teams`);
+                return liveNbaData;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Alternative NBA data fetch failed:', error.message);
+      }
+      return null;
+    }
+
+    async function populateSports(){
+      // NFL Section
+      const nflBody = document.getElementById('nflBody');
+      const nflSubtitle = document.getElementById('nflSubtitle');
+      
+      nflBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading NFL data...</td></tr>';
+      nflSubtitle.innerHTML = '<span style="color:#6c757d">Fetching live standings...</span>';
+      
+      const nflData = await fetchLiveNflData();
+      nflBody.innerHTML = '';
+      
+      if (nflData && nflData.length > 0) {
+        nflData.forEach((r, index) => {
+          const tr = document.createElement('tr');
+          // Add data attribute for search filtering
+          tr.setAttribute('data-team', r.team.toLowerCase());
+          tr.style.cursor = 'default';
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td>`;
+          nflBody.appendChild(tr);
+        });
+        
+        // Update subtitle to show live data with timestamp
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        nflSubtitle.innerHTML = `<span style="color:#198754">✓ Live ESPN data</span> <span style="color:#6c757d;font-size:0.8rem">(updated ${timestamp})</span>`;
+      } else {
+        // Fallback to sample data
+        nflSample.forEach((r, index) => {
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-team', r.team.toLowerCase());
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td>`;
+          nflBody.appendChild(tr);
+        });
+        
+        nflSubtitle.innerHTML = '<span style="color:#dc3545">⚠ Sample data (API unavailable)</span>';
+      }
+      
+      // NBA Section
+      const nbaBody = document.getElementById('nbaBody');
+      const nbaSubtitle = document.getElementById('nbaSubtitle');
+      
+      nbaBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading NBA data...</td></tr>';
+      nbaSubtitle.innerHTML = '<span style="color:#6c757d">Fetching live standings...</span>';
+      
+      const nbaData = await fetchLiveNbaData();
+      nbaBody.innerHTML = '';
+      
+      if (nbaData && nbaData.length > 0) {
+        nbaData.forEach((r, index) => {
+          const tr = document.createElement('tr');
+          // Add data attribute for search filtering
+          tr.setAttribute('data-team', r.team.toLowerCase());
+          tr.style.cursor = 'default';
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td><td>${r.opp}</td>`;
+          nbaBody.appendChild(tr);
+        });
+        
+        // Update subtitle to show live data with timestamp
+        const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        nbaSubtitle.innerHTML = `<span style="color:#198754">✓ Live ESPN data</span> <span style="color:#6c757d;font-size:0.8rem">(updated ${timestamp})</span>`;
+      } else {
+        // Fallback to sample data
+        nbaSample.forEach((r, index) => {
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-team', r.team.toLowerCase());
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td><td>${r.opp}</td>`;
+          nbaBody.appendChild(tr);
+        });
+        
+        nbaSubtitle.innerHTML = '<span style="color:#dc3545">⚠ Sample data (API unavailable)</span>';
+      }
+    }
+
+    // Team search functionality
+    function searchTeam(teamName) {
+      const teamSearchResults = document.getElementById('teamSearchResults');
+      const teamSearchTitle = document.getElementById('teamSearchTitle');
+      const teamSearchSubtitle = document.getElementById('teamSearchSubtitle');
+      const teamStatsDisplay = document.getElementById('teamStatsDisplay');
+      
+      if (!teamName || teamName.trim() === '') {
+        teamSearchResults.style.display = 'none';
+        return;
+      }
+
+      const searchTerm = teamName.toLowerCase().trim();
+      let foundTeam = null;
+      let league = '';
+
+      // Search NFL teams (live or sample data)
+      const nflDataToSearch = liveNflData || nflSample;
+      foundTeam = nflDataToSearch.find(team => 
+        team.team.toLowerCase().includes(searchTerm)
+      );
+      if (foundTeam) {
+        league = 'NFL';
+      }
+
+      // Search NBA teams if NFL not found
+      if (!foundTeam) {
+        const nbaDataToSearch = liveNbaData || nbaSample;
+        foundTeam = nbaDataToSearch.find(team => 
+          team.team.toLowerCase().includes(searchTerm)
+        );
+        if (foundTeam) {
+          league = 'NBA';
+        }
+      }
+
+      if (foundTeam) {
+        teamSearchTitle.textContent = `${foundTeam.team} (${league})`;
+        teamSearchSubtitle.textContent = `Current season stats - ${foundTeam.w + foundTeam.l} games played`;
+        
+        // Create stats display
+        let statsHtml = '<div class="row">';
+        
+        if (league === 'NFL') {
+          const winPct = ((foundTeam.w / (foundTeam.w + foundTeam.l)) * 100).toFixed(1);
+          statsHtml += `
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#0d6efd">${foundTeam.w}-${foundTeam.l}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Record</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#198754">${winPct}%</div>
+                <div style="font-size:0.9rem;color:#6c757d">Win %</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#fd7e14">${foundTeam.pf}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Points For</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#dc3545">${foundTeam.pa}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Points Against</div>
+              </div>
+            </div>
+          `;
+        } else {
+          const winPct = ((foundTeam.w / (foundTeam.w + foundTeam.l)) * 100).toFixed(1);
+          statsHtml += `
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#0d6efd">${foundTeam.w}-${foundTeam.l}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Record</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#198754">${winPct}%</div>
+                <div style="font-size:0.9rem;color:#6c757d">Win %</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#fd7e14">${foundTeam.pts}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Avg Points</div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="text-center">
+                <div style="font-size:1.4rem;font-weight:700;color:#dc3545">${foundTeam.opp}</div>
+                <div style="font-size:0.9rem;color:#6c757d">Avg Allowed</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        statsHtml += '</div>';
+        teamStatsDisplay.innerHTML = statsHtml;
+        teamSearchResults.style.display = 'block';
+      } else {
+        teamSearchTitle.textContent = 'Team Not Found';
+        teamSearchSubtitle.textContent = 'No team found matching your search';
+        teamStatsDisplay.innerHTML = '<div class="text-center text-muted">Try searching for a different team name</div>';
+        teamSearchResults.style.display = 'block';
+      }
+    }
+
+    // Spotify embed
+    document.getElementById('embedBtn').addEventListener('click', ()=>{
+      const url = document.getElementById('spotifyInput').value.trim();
+      const wrap = document.getElementById('spotifyEmbedWrap');
+      if(!url){ wrap.innerHTML = '<div style="color:#6c757d">Paste a Spotify playlist link above.</div>'; return; }
+      const id = extractSpotifyId(url);
+      if(!id){ wrap.innerHTML = '<div style="color:#d9534f">Invalid playlist URL.</div>'; return; }
+      wrap.innerHTML = `<iframe src="https://open.spotify.com/embed/playlist/${id}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius: 12px;"></iframe>`;
+    });
+    function extractSpotifyId(url){ try{ const parts = url.split('/'); const last = parts[parts.length-1]; return last.split('?')[0]; }catch(e){return null;} }
+
+    // Team search event listener (commented out - element doesn't exist)
+    // document.getElementById('teamSearch').addEventListener('input', (e) => {
+    //   searchTeam(e.target.value);
+    // });
+
+    // NFL snapshot search
+    document.getElementById('nflSearch').addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      const nflBody = document.getElementById('nflBody');
+      const rows = nflBody.getElementsByTagName('tr');
+      
+      Array.from(rows).forEach(row => {
+        const teamName = row.getAttribute('data-team');
+        if (teamName && teamName.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // NBA snapshot search
+    document.getElementById('nbaSearch').addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      const nbaBody = document.getElementById('nbaBody');
+      const rows = nbaBody.getElementsByTagName('tr');
+      
+      Array.from(rows).forEach(row => {
+        const teamName = row.getAttribute('data-team');
+        if (teamName && teamName.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // Month selector change listener
+    monthSelect.addEventListener('change', () => {
+      refreshWeather();
+    });
+
+    // Reset filters
+    document.getElementById('resetFilters').addEventListener('click', ()=>{ 
+      monthSelect.value = new Date().getMonth(); 
+      // document.getElementById('sportSelect').value='all'; // Element doesn't exist
+      // document.getElementById('teamSearch').value=''; // Element doesn't exist
+      document.getElementById('teamSearchResults').style.display = 'none';
+      document.getElementById('nflSearch').value = '';
+      document.getElementById('nbaSearch').value = '';
+      document.getElementById('tickerLeagueFilter').value = 'all';
+      
+      // Show all NFL rows
+      const nflRows = document.getElementById('nflBody').getElementsByTagName('tr');
+      Array.from(nflRows).forEach(row => row.style.display = '');
+      
+      // Show all NBA rows
+      const nbaRows = document.getElementById('nbaBody').getElementsByTagName('tr');
+      Array.from(nbaRows).forEach(row => row.style.display = '');
+      
+      refreshAll(); 
+    });
+
+    async function refreshAll(){ 
+      await refreshWeather(); 
+      await populateSports(); 
+    }
+
+    // Refresh button event listeners
+    document.getElementById('refreshNFL').addEventListener('click', async () => {
+      await populateSports();
+    });
+
+    document.getElementById('refreshNBA').addEventListener('click', async () => {
+      await populateSports();
+    });
+
+    // Export PNG of the main charts area
+    document.getElementById('downloadPNG').addEventListener('click', ()=>{
+      // Convert weather chart + snapshots into a single image by exporting the chart only for simplicity
+      const link = document.createElement('a');
+      link.download = 'deo-dashboard-weather.png';
+      link.href = document.getElementById('weatherChartLarge').toDataURL('image/png',1.0);
+      link.click();
+    });
+
+    // Storage for live game scores
+    let liveGameScores = [];
+    let tickerIndex = 0;
+
+    // Fetch live game scores from ESPN APIs
+    async function fetchLiveGameScores() {
+      const scores = [];
+      
+      try {
+        // Fetch NFL scores
+        console.log('Fetching live NFL scores...');
+        const nflResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard', {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
+          }
+        });
+        
+        if (nflResponse.ok) {
+          const nflData = await nflResponse.json();
+          console.log('NFL scores received:', nflData);
+          
+          if (nflData.events && nflData.events.length > 0) {
+            nflData.events.slice(0, 5).forEach(event => {
+              if (event.competitions && event.competitions[0]) {
+                const competition = event.competitions[0];
+                const competitors = competition.competitors;
+                
+                if (competitors && competitors.length >= 2) {
+                  const homeTeam = competitors.find(c => c.homeAway === 'home');
+                  const awayTeam = competitors.find(c => c.homeAway === 'away');
+                  
+                  if (homeTeam && awayTeam) {
+                    const status = competition.status.type.shortDetail || competition.status.type.detail;
+                    const homeScore = homeTeam.score || '0';
+                    const awayScore = awayTeam.score || '0';
+                    
+                    scores.push({
+                      league: 'NFL',
+                      text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
+                      isLive: competition.status.type.state !== 'post'
+                    });
+                  }
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.log('NFL scores fetch failed:', error.message);
+      }
+      
+      try {
+        // Fetch NBA scores
+        console.log('Fetching live NBA scores...');
+        const nbaResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', {
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
+          }
+        });
+        
+        if (nbaResponse.ok) {
+          const nbaData = await nbaResponse.json();
+          console.log('NBA scores received:', nbaData);
+          
+          if (nbaData.events && nbaData.events.length > 0) {
+            nbaData.events.slice(0, 5).forEach(event => {
+              if (event.competitions && event.competitions[0]) {
+                const competition = event.competitions[0];
+                const competitors = competition.competitors;
+                
+                if (competitors && competitors.length >= 2) {
+                  const homeTeam = competitors.find(c => c.homeAway === 'home');
+                  const awayTeam = competitors.find(c => c.homeAway === 'away');
+                  
+                  if (homeTeam && awayTeam) {
+                    const status = competition.status.type.shortDetail || competition.status.type.detail;
+                    const homeScore = homeTeam.score || '0';
+                    const awayScore = awayTeam.score || '0';
+                    
+                    scores.push({
+                      league: 'NBA',
+                      text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
+                      isLive: competition.status.type.state !== 'post'
+                    });
+                  }
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.log('NBA scores fetch failed:', error.message);
+      }
+      
+      // If we got live scores, use them; otherwise use fallback
+      if (scores.length > 0) {
+        liveGameScores = scores;
+        console.log(`Fetched ${scores.length} live game scores`);
+      } else {
+        // Fallback sample data
+        liveGameScores = [
+          { league: 'NFL', text: 'Sample: Chiefs 31 — 28 Jaguars (FINAL)', isLive: false },
+          { league: 'NBA', text: 'Sample: Lakers 112 — 108 Warriors (FINAL)', isLive: false },
+          { league: 'NFL', text: 'Sample: Eagles 24 — 17 Cowboys (FINAL)', isLive: false }
+        ];
+      }
+      
+      return liveGameScores;
+    }
+
+    // Live ticker for current scores
+    function updateLiveTicker() {
+      const tickerElement = document.getElementById('liveTicker');
+      const tickerSubtitle = document.getElementById('tickerSubtitle');
+      const leagueFilter = document.getElementById('tickerLeagueFilter');
+      if (!tickerElement) return;
+      
+      if (liveGameScores.length === 0) {
+        tickerElement.textContent = 'Loading live scores...';
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Connecting to ESPN...</span>';
+        return;
+      }
+      
+      // Filter scores by selected league
+      const selectedLeague = leagueFilter ? leagueFilter.value : 'all';
+      const filteredScores = selectedLeague === 'all' 
+        ? liveGameScores 
+        : liveGameScores.filter(score => score.league === selectedLeague);
+      
+      // Check if we have scores for the selected filter
+      if (filteredScores.length === 0) {
+        tickerElement.textContent = `No ${selectedLeague} games available`;
+        tickerElement.style.color = '#6c757d';
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Check back later</span>';
+        return;
+      }
+      
+      // Rotate through filtered scores
+      const currentScore = filteredScores[tickerIndex % filteredScores.length];
+      
+      // Format with league prefix (only if showing all leagues)
+      const displayText = selectedLeague === 'all'
+        ? (currentScore.text.startsWith('Sample:') ? currentScore.text : `${currentScore.league}: ${currentScore.text}`)
+        : currentScore.text;
+      
+      tickerElement.textContent = displayText;
+      
+      // Update subtitle and color based on data source
+      if (currentScore.text.startsWith('Sample:')) {
+        tickerElement.style.color = '#6c757d';
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#dc3545">Sample data (API unavailable)</span>';
+      } else if (currentScore.isLive) {
+        tickerElement.style.color = '#198754'; // Green for live games
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE ESPN scoreboard</span>';
+      } else {
+        tickerElement.style.color = '#000'; // Black for completed
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">✓ Live ESPN scoreboard</span>';
+      }
+      
+      tickerIndex++;
+    }
+
+    // Initial fetch of game scores
+    fetchLiveGameScores().then(() => {
+      updateLiveTicker();
+    });
+
+    // Update ticker every 5 seconds
+    setInterval(updateLiveTicker, 5000);
+    
+    // Refresh game scores every 2 minutes
+    setInterval(fetchLiveGameScores, 120000);
+
+    // League filter change listener
+    const tickerLeagueFilter = document.getElementById('tickerLeagueFilter');
+    if (tickerLeagueFilter) {
+      tickerLeagueFilter.addEventListener('change', () => {
+        tickerIndex = 0; // Reset rotation when filter changes
+        updateLiveTicker(); // Immediately update display
+      });
+    }
+
+    // Expose a console helper to programmatically set a Spotify playlist
+    window.embedSpotify = function(url){ document.getElementById('spotifyInput').value = url; document.getElementById('embedBtn').click(); };
+
+    // initial render
+    refreshAll();
+
+  </script>
+</body>
+</html>
