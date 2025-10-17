@@ -28,10 +28,6 @@
         <h3 style="margin:0">Adeola (Deo) Ekundayo</h3>
         <div style="color:#6c757d">Charlotte, NC — 🎧 Music 🏀 🏈 Sports & 📊 Data</div>
       </div>
-      <div class="ms-auto d-flex gap-2">
-        <button id="resetFilters" class="btn btn-outline-secondary">Reset Filters</button>
-        <button id="downloadPNG" class="btn btn-primary">Export PNG</button>
-      </div>
     </header>
 
     <div class="row g-3">
@@ -66,7 +62,7 @@
           </div>
           <div class="col-md-4">
             <div class="kpi text-center" style="position:relative">
-              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.08)">
+              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;">
                 <option value="all">All</option>
                 <option value="NFL">NFL</option>
                 <option value="NBA">NBA</option>
@@ -996,26 +992,6 @@
       refreshWeather();
     });
 
-    // Reset filters
-    document.getElementById('resetFilters').addEventListener('click', ()=>{ 
-      monthSelect.value = new Date().getMonth(); 
-      // document.getElementById('sportSelect').value='all'; // Element doesn't exist
-      // document.getElementById('teamSearch').value=''; // Element doesn't exist
-      document.getElementById('teamSearchResults').style.display = 'none';
-      document.getElementById('nflSearch').value = '';
-      document.getElementById('nbaSearch').value = '';
-      document.getElementById('tickerLeagueFilter').value = 'all';
-      
-      // Show all NFL rows
-      const nflRows = document.getElementById('nflBody').getElementsByTagName('tr');
-      Array.from(nflRows).forEach(row => row.style.display = '');
-      
-      // Show all NBA rows
-      const nbaRows = document.getElementById('nbaBody').getElementsByTagName('tr');
-      Array.from(nbaRows).forEach(row => row.style.display = '');
-      
-      refreshAll(); 
-    });
 
     async function refreshAll(){ 
       await refreshWeather(); 
@@ -1031,14 +1007,6 @@
       await populateSports();
     });
 
-    // Export PNG of the main charts area
-    document.getElementById('downloadPNG').addEventListener('click', ()=>{
-      // Convert weather chart + snapshots into a single image by exporting the chart only for simplicity
-      const link = document.createElement('a');
-      link.download = 'deo-dashboard-weather.png';
-      link.href = document.getElementById('weatherChartLarge').toDataURL('image/png',1.0);
-      link.click();
-    });
 
     // Storage for live game scores
     let liveGameScores = [];
