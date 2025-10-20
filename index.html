@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Deo — Tableau-style Dashboard</title>
+  <title>Deo's Personal Dashboard</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -26,7 +26,7 @@
       <img id="profileImg" class="profile-pic" src="deo.jpeg" alt="Deo">
       <div>
         <h3 style="margin:0">Adeola (Deo) Ekundayo</h3>
-        <div style="color:#6c757d">Charlotte, NC — 🎧 Music 🏀 🏈 Sports & 📊 Data</div>
+        <div style="color:#6c757d">Charlotte, NC — 🎧 Music | 🏀 🏈 Sports | 📊 Data</div>
       </div>
     </header>
 
@@ -47,29 +47,24 @@
       <div class="col-lg-9">
         <div class="row g-3">
           <div class="col-md-4">
-            <div class="kpi text-center">
+            <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
               <div style="font-size:0.9rem;color:#6c757d">Current Temperature</div>
               <div id="kpiCurrentTemp" style="font-size:1.6rem;font-weight:700">Loading...</div>
-              <div style="font-size:0.85rem;color:#888">Charlotte, NC</div>
+              <div id="weatherSubtitle" style="font-size:0.85rem;color:#888">Charlotte, NC</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="kpi text-center">
+            <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
               <div style="font-size:0.9rem;color:#6c757d">Favorite Interest</div>
               <div style="font-size:1.2rem;font-weight:700">Music & Sports</div>
               <div style="font-size:0.85rem;color:#888">Playlists & Scores</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="kpi text-center" style="position:relative">
-              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;">
-                <option value="all">All</option>
-                <option value="NFL">NFL</option>
-                <option value="NBA">NBA</option>
-              </select>
-              <div style="font-size:0.9rem;color:#6c757d">Score Ticker</div>
-              <div id="liveTicker" style="font-size:1.05rem;font-weight:700">Loading scores...</div>
-              <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754">Live ESPN scoreboard</div>
+            <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
+              <div style="font-size:0.9rem;color:#6c757d">Sports & Scores</div>
+              <div style="font-size:1.2rem;font-weight:700">Live Updates</div>
+              <div style="font-size:0.85rem;color:#888">Scores & Stats</div>
             </div>
           </div>
 
@@ -88,6 +83,32 @@
               <div style="height: 330px; position: relative;">
                 <canvas id="weatherChartLarge" style="max-height: 100%; width: 100%;"></canvas>
               </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="kpi text-center" style="position:relative;min-height:120px;display:flex;flex-direction:column;justify-content:center;">
+              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;z-index:10;">
+                <option value="all">All</option>
+                <option value="NFL">NFL</option>
+                <option value="NBA">NBA</option>
+              </select>
+              <div style="font-size:0.9rem;color:#6c757d">Score Ticker</div>
+              <div id="liveTicker" style="font-size:1.2rem;font-weight:700;margin-top:4px;">Loading scores...</div>
+              <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754;margin-top:4px;">Live ESPN scoreboard</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="chart-card" id="playerStatsCard" style="position:relative;min-height:120px;display:flex;flex-direction:column;justify-content:center;">
+              <div style="text-align:center;">
+                <div class="section-title" style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Notable Performances</div>
+                <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.3;min-height:40px;">
+                  <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
+                </div>
+                <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
+              </div>
+
             </div>
           </div>
 
@@ -423,10 +444,10 @@
         kpiElement.innerText = currentWeather.currentTemp + ' °F';
         
         // Update the subtitle to show weather info
-        const subtitle = document.querySelector('#kpiCurrentTemp').nextElementSibling;
-        if (subtitle && currentWeather.source) {
-          subtitle.textContent = `${currentWeather.weatherDescription} • ${currentWeather.source}`;
-          subtitle.style.color = currentWeather.source.includes('Live API') ? '#198754' : '#6c757d';
+        const weatherSubtitle = document.getElementById('weatherSubtitle');
+        if (weatherSubtitle && currentWeather.source) {
+          weatherSubtitle.textContent = `${currentWeather.weatherDescription} • ${currentWeather.source}`;
+          weatherSubtitle.style.color = currentWeather.source.includes('Live API') ? '#198754' : '#6c757d';
         }
       } catch (error) {
         console.log('Current temperature fetch failed:', error);
@@ -441,7 +462,8 @@
       weatherChart.update();
       
       // Update chart subtitle to show data source
-      const chartSubtitle = document.querySelector('.chart-card .section-title').nextElementSibling;
+      const weatherChartCard = document.querySelector('#weatherChartLarge').closest('.chart-card');
+      const chartSubtitle = weatherChartCard ? weatherChartCard.querySelector('.section-title').nextElementSibling : null;
       if (chartSubtitle && data.source) {
         const monthName = months[m];
         if (data.isLive) {
@@ -1008,9 +1030,12 @@
     });
 
 
-    // Storage for live game scores
+    // Storage for live game scores and player stats
     let liveGameScores = [];
+    let livePlayerStats = [];
+    let currentTickerGames = []; // Track games currently displayed in score ticker
     let tickerIndex = 0;
+    let showPlayerStats = false; // Toggle between scores and player stats
 
     // Fetch live game scores from ESPN APIs
     async function fetchLiveGameScores() {
@@ -1048,7 +1073,8 @@
                     scores.push({
                       league: 'NFL',
                       text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
-                      isLive: competition.status.type.state !== 'post'
+                      isLive: competition.status.type.state !== 'post',
+                      gameId: event.id
                     });
                   }
                 }
@@ -1092,7 +1118,8 @@
                     scores.push({
                       league: 'NBA',
                       text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
-                      isLive: competition.status.type.state !== 'post'
+                      isLive: competition.status.type.state !== 'post',
+                      gameId: event.id
                     });
                   }
                 }
@@ -1107,7 +1134,10 @@
       // If we got live scores, use them; otherwise use fallback
       if (scores.length > 0) {
         liveGameScores = scores;
+        // Update current ticker games with game IDs
+        currentTickerGames = scores.map(score => score.gameId).filter(id => id);
         console.log(`Fetched ${scores.length} live game scores`);
+        console.log('Current ticker games:', currentTickerGames);
       } else {
         // Fallback sample data
         liveGameScores = [
@@ -1115,18 +1145,151 @@
           { league: 'NBA', text: 'Sample: Lakers 112 — 108 Warriors (FINAL)', isLive: false },
           { league: 'NFL', text: 'Sample: Eagles 24 — 17 Cowboys (FINAL)', isLive: false }
         ];
+        currentTickerGames = [];
       }
       
       return liveGameScores;
     }
 
-    // Live ticker for current scores
+    // Fetch real player statistics from recent games via backend API
+    async function fetchLivePlayerStats() {
+      const playerStats = [];
+      
+      try {
+        console.log('=== FETCHING PLAYER STATS VIA BACKEND ===');
+        
+        // Call our backend API which handles all the external API calls
+        const response = await fetch('/api/player-stats');
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Backend API response:', data);
+          
+          if (data.success && data.data && data.data.length > 0) {
+            playerStats.push(...data.data);
+            console.log(`Backend returned ${data.data.length} player stats`);
+            console.log('NBA data:', data.nba);
+            console.log('NFL data:', data.nfl);
+          } else if (data.hasLiveGames === false) {
+            console.log('No live games detected, showing stats unavailable');
+            playerStats = [];
+          } else {
+            console.log('Backend API returned no data or failed:', data.error);
+            playerStats = [];
+          }
+        } else {
+          console.log('Backend API failed with status:', response.status);
+          playerStats = [];
+        }
+      } catch (error) {
+        console.log('Backend API call failed:', error.message);
+      }
+      
+      // If we got player stats, use them; otherwise use fallback
+      console.log('=== FINAL PLAYER STATS RESULT ===');
+      console.log('Total player stats found:', playerStats.length);
+      console.log('Player stats:', playerStats);
+      
+      if (playerStats.length > 0) {
+        livePlayerStats = playerStats;
+        console.log('Using real player stats');
+      } else {
+        livePlayerStats = getFallbackPlayerStats();
+        console.log('Using fallback player stats');
+      }
+      
+      console.log('Final livePlayerStats:', livePlayerStats);
+      return livePlayerStats;
+    }
+
+    // Helper function for fallback player stats
+    function getFallbackPlayerStats() {
+      return []; // Return empty array to trigger "Stats Unavailable" message
+    }
+
+
+    // Update player stats display area
+    function updatePlayerStatsDisplay() {
+      const playerStatsElement = document.getElementById('playerStatsDisplay');
+      const playerStatsSubtitle = document.getElementById('playerStatsSubtitle');
+      const leagueFilter = document.getElementById('tickerLeagueFilter');
+      
+      
+      if (!playerStatsElement) return;
+      
+      if (livePlayerStats.length === 0) {
+        playerStatsElement.innerHTML = '<div style="color:#6c757d;text-align:center;padding:10px;">Stats Currently Unavailable</div>';
+        if (playerStatsSubtitle) playerStatsSubtitle.innerHTML = '';
+        return;
+      }
+      
+      // Filter player stats by selected league and only show stats for games currently in ticker
+      const selectedLeague = leagueFilter ? leagueFilter.value : 'all';
+      let filteredStats = livePlayerStats.filter(stat => 
+        currentTickerGames.includes(stat.gameId) && 
+        (selectedLeague === 'all' || 
+         (selectedLeague === 'NBA' && stat.league === 'NBA') || 
+         (selectedLeague === 'NFL' && stat.league === 'NFL'))
+      );
+      
+      if (filteredStats.length === 0) {
+        playerStatsElement.innerHTML = `<div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">No ${selectedLeague} player stats available</div>`;
+        if (playerStatsSubtitle) playerStatsSubtitle.innerHTML = '';
+        return;
+      }
+      
+      // Display top 2 performers
+      const topPerformers = filteredStats.slice(0, 2);
+      let statsHtml = '';
+      
+      topPerformers.forEach((player, index) => {
+        let playerText = '';
+        let liveIndicator = '';
+        
+        if (player.points !== undefined) {
+          // NBA stats
+          playerText = `${player.name} (${player.team}): ${player.points}PTS ${player.rebounds}REB ${player.assists}AST`;
+        } else if (player.passingYards !== undefined) {
+          // NFL QB stats
+          playerText = `${player.name} (${player.team}): ${player.passingYards}YDS ${player.passingTDs}TD`;
+        } else if (player.rushingYards !== undefined) {
+          // NFL RB stats
+          playerText = `${player.name} (${player.team}): ${player.rushingYards}YDS ${player.rushingTDs}TD`;
+        } else if (player.receivingYards !== undefined) {
+          // NFL WR stats
+          playerText = `${player.name} (${player.team}): ${player.receivingYards}YDS ${player.receivingTDs}TD`;
+        } else {
+          playerText = `${player.name} (${player.team})`;
+        }
+        
+        // Add live indicator
+        if (player.isLive) {
+          liveIndicator = ' 🔴';
+        }
+        
+        const color = player.isLive ? '#198754' : '#6c757d';
+        statsHtml += `<div style="margin-bottom:6px;color:${color};font-weight:500;">${playerText}${liveIndicator}</div>`;
+      });
+      
+      playerStatsElement.innerHTML = statsHtml;
+      
+      // Update subtitle
+      const liveCount = topPerformers.filter(p => p.isLive).length;
+      if (liveCount > 0) {
+        playerStatsSubtitle.innerHTML = `<span style="color:#198754">🔴 ${liveCount} live performance${liveCount > 1 ? 's' : ''}</span>`;
+      } else {
+        playerStatsSubtitle.innerHTML = 'Recent game performances';
+      }
+    }
+
+    // Live ticker for current scores (always shows scores now)
     function updateLiveTicker() {
       const tickerElement = document.getElementById('liveTicker');
       const tickerSubtitle = document.getElementById('tickerSubtitle');
       const leagueFilter = document.getElementById('tickerLeagueFilter');
       if (!tickerElement) return;
       
+      // Always show game scores
       if (liveGameScores.length === 0) {
         tickerElement.textContent = 'Loading live scores...';
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Connecting to ESPN...</span>';
@@ -1172,16 +1335,30 @@
       tickerIndex++;
     }
 
-    // Initial fetch of game scores
+    // Initial fetch of game scores and player stats
     fetchLiveGameScores().then(() => {
       updateLiveTicker();
+      // Fetch player stats after game scores are loaded
+      return fetchLivePlayerStats();
+    }).then(() => {
+      updatePlayerStatsDisplay();
     });
 
     // Update ticker every 5 seconds
-    setInterval(updateLiveTicker, 5000);
+    setInterval(() => {
+      updateLiveTicker();
+      updatePlayerStatsDisplay();
+    }, 5000);
     
     // Refresh game scores every 2 minutes
     setInterval(fetchLiveGameScores, 120000);
+    
+    // Refresh player stats every 2 minutes (same as score ticker)
+    setInterval(() => {
+      fetchLivePlayerStats().then(() => {
+        updatePlayerStatsDisplay();
+      });
+    }, 120000);
 
     // League filter change listener
     const tickerLeagueFilter = document.getElementById('tickerLeagueFilter');
@@ -1189,14 +1366,35 @@
       tickerLeagueFilter.addEventListener('change', () => {
         tickerIndex = 0; // Reset rotation when filter changes
         updateLiveTicker(); // Immediately update display
+        updatePlayerStatsDisplay(); // Update player stats too
       });
     }
 
+    // Toggle button for player stats (shows/hides the entire Notable Performances card)
+    const toggleStatsBtn = document.getElementById('toggleStatsBtn');
+    if (toggleStatsBtn) {
+      toggleStatsBtn.addEventListener('click', () => {
+        const playerStatsCard = document.getElementById('playerStatsCard');
+        if (playerStatsCard) {
+          const isHidden = playerStatsCard.style.display === 'none';
+          playerStatsCard.style.display = isHidden ? 'block' : 'none';
+          toggleStatsBtn.textContent = isHidden ? 'Hide Player Stats' : 'Show Player Stats';
+          
+          if (!isHidden) {
+            updatePlayerStatsDisplay(); // Update when showing
+          }
+        }
+      });
+    }
+
+
     // Expose a console helper to programmatically set a Spotify playlist
     window.embedSpotify = function(url){ document.getElementById('spotifyInput').value = url; document.getElementById('embedBtn').click(); };
+    
 
     // initial render
     refreshAll();
+    
 
   </script>
 </body>
