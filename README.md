@@ -31,16 +31,22 @@ A comprehensive, interactive personal dashboard inspired by Tableau's design aes
 
 ## 🚀 Quick Start
 
-1. **Download the file**: Save `personal_dashboard_deo.html` to your local machine
-2. **Open in browser**: Simply open the HTML file in any modern web browser
-3. **Add profile image**: Place a file named `deo.jpeg` in the same directory (or update the image path in the HTML)
+1. **Clone the repository**: `git clone [your-repo-url]`
+2. **Install dependencies**: `npm install`
+3. **Start the server**: `npm start` or `node server.js`
+4. **Open in browser**: Navigate to `http://localhost:3000`
+5. **Add profile image**: Place a file named `deo.jpeg` in the same directory (or update the image path in the HTML)
 
 ## 📁 File Structure
 
 ```
-personal_dashboard_deo.html    # Main dashboard file
-deo.jpeg                      # Profile image (optional)
-README.md                     # This documentation
+personal-dashboard/
+├── index.html                # Main dashboard file
+├── server.js                 # Express.js backend server
+├── package.json              # Node.js dependencies
+├── package-lock.json         # Dependency lock file
+├── README.md                 # This documentation
+└── .gitignore               # Git ignore rules
 ```
 
 ## 🔧 Configuration
@@ -115,9 +121,13 @@ To change the weather location from Charlotte, NC:
 ## 🔧 Technical Details
 
 ### Dependencies
+- **Express.js**: Backend server for API endpoints
+- **Node.js**: Runtime environment
 - **Bootstrap 5.3.2**: CSS framework for responsive layout
 - **Chart.js 4.4.0**: Interactive charting library
-- **Vanilla JavaScript**: No additional frameworks required
+- **Vanilla JavaScript**: Frontend functionality
+- **CORS**: Cross-origin resource sharing
+- **node-fetch**: HTTP client for API calls
 
 ### Browser Compatibility
 - Chrome 80+
