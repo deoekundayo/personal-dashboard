@@ -18,6 +18,36 @@
     .filters .form-control{border-radius:8px}
     .chart-card{background:var(--card-bg);border-radius:10px;padding:12px;box-shadow:0 6px 18px rgba(12,24,50,0.05);}
     .footer-note{font-size:0.85rem;color:#6c757d;margin-top:12px}
+       .league-segmented-control{
+         display:flex;
+         background:#f5f5f5;
+         border:1px solid #e9ecef;
+         border-radius:8px;
+         padding:2px;
+         overflow:hidden;
+         width:100%;
+       }
+       .league-button{
+         border:none;
+         background:transparent;
+         padding:6px 12px;
+         font-size:0.75rem;
+         font-weight:500;
+         cursor:pointer;
+         transition:all 0.2s ease;
+         color:#6c757d;
+         flex:1;
+         text-align:center;
+       }
+       .league-button.active{
+         background:#306dc2;
+         color:white;
+         border-radius:6px;
+         font-weight:600;
+       }
+       .league-button:not(.active):hover{
+         color:#333;
+       }
   </style>
 </head>
 <body>
@@ -86,29 +116,31 @@
             </div>
           </div>
 
-          <div class="col-md-6">
-            <div class="kpi text-center" style="position:relative;min-height:120px;display:flex;flex-direction:column;justify-content:center;">
-              <select id="tickerLeagueFilter" style="position:absolute;top:8px;right:8px;border:1px solid #ddd;border-radius:6px;padding:4px 8px;font-size:0.75rem;background:white;cursor:pointer;z-index:10;">
-                <option value="all">All</option>
-                <option value="NFL">NFL</option>
-                <option value="NBA">NBA</option>
-              </select>
-              <div style="font-size:0.9rem;color:#6c757d">Score Ticker</div>
-              <div id="liveTicker" style="font-size:1.2rem;font-weight:700;margin-top:4px;">Loading scores...</div>
-              <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754;margin-top:4px;">Live ESPN scoreboard</div>
-            </div>
-          </div>
-
-          <div class="col-md-6">
-            <div class="chart-card" id="playerStatsCard" style="position:relative;min-height:120px;display:flex;flex-direction:column;justify-content:center;">
-              <div style="text-align:center;">
-                <div class="section-title" style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Notable Performances</div>
-                <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.3;min-height:40px;">
-                  <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
+          <div class="col-12">
+            <div class="chart-card" style="position:relative;min-height:200px;">
+              <!-- Score Display Section -->
+              <div style="text-align:center;margin-bottom:20px;">
+                <div style="display:flex;justify-content:center;margin-bottom:8px;">
+                  <div class="league-segmented-control">
+                    <button id="nflButton" class="league-button active" data-league="NFL">NFL</button>
+                    <button id="nbaButton" class="league-button" data-league="NBA">NBA</button>
+                  </div>
                 </div>
-                <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
+                <div style="font-size:0.9rem;color:#6c757d;margin-bottom:8px;">Live Score</div>
+                <div id="liveTicker" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">Loading scores...</div>
+                <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754;">Live ESPN scoreboard</div>
               </div>
-
+              
+              <!-- Player Stats Section (Hidden by default, shown only when game is over) -->
+              <div id="playerStatsSection" style="border-top:1px solid #e9ecef;padding-top:16px;display:none;">
+                <div style="text-align:center;">
+                  <div style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Player Stats</div>
+                  <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.4;min-height:40px;">
+                    <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
+                  </div>
+                  <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -176,6 +208,9 @@
     // OpenWeatherMap API configuration
     const WEATHER_API_KEY = 'demo'; // Using demo key - replace with your actual API key
     const CHARLOTTE_COORDS = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC coordinates
+    
+    // League filter - default to NFL
+    window.selectedLeague = 'NFL';
 
     // Fetch current temperature for Charlotte using free weather API
     async function fetchCurrentTemperature() {
@@ -1151,12 +1186,12 @@
       return liveGameScores;
     }
 
-    // Fetch real player statistics from recent games via backend API
-    async function fetchLivePlayerStats() {
+    // Fetch player statistics from finished games only
+    async function fetchFinishedGamePlayerStats() {
       const playerStats = [];
       
       try {
-        console.log('=== FETCHING PLAYER STATS VIA BACKEND ===');
+        console.log('=== FETCHING FINISHED GAME PLAYER STATS VIA BACKEND ===');
         
         // Call our backend API which handles all the external API calls
         const response = await fetch('/api/player-stats');
@@ -1166,13 +1201,10 @@
           console.log('Backend API response:', data);
           
           if (data.success && data.data && data.data.length > 0) {
-            playerStats.push(...data.data);
-            console.log(`Backend returned ${data.data.length} player stats`);
-            console.log('NBA data:', data.nba);
-            console.log('NFL data:', data.nfl);
-          } else if (data.hasLiveGames === false) {
-            console.log('No live games detected, showing stats unavailable');
-            playerStats = [];
+            // Filter to only include stats from finished games (not live)
+            const finishedGameStats = data.data.filter(player => !player.isLive);
+            playerStats.push(...finishedGameStats);
+            console.log(`Backend returned ${finishedGameStats.length} finished game player stats (filtered from ${data.data.length} total)`);
           } else {
             console.log('Backend API returned no data or failed:', data.error);
             playerStats = [];
@@ -1183,102 +1215,181 @@
         }
       } catch (error) {
         console.log('Backend API call failed:', error.message);
+        playerStats = [];
       }
       
-      // If we got player stats, use them; otherwise use fallback
-      console.log('=== FINAL PLAYER STATS RESULT ===');
-      console.log('Total player stats found:', playerStats.length);
+      // Only use finished game stats, no fallback for live games
+      console.log('=== FINAL FINISHED GAME PLAYER STATS RESULT ===');
+      console.log('Total finished game player stats found:', playerStats.length);
       console.log('Player stats:', playerStats);
       
-      if (playerStats.length > 0) {
-        livePlayerStats = playerStats;
-        console.log('Using real player stats');
-      } else {
-        livePlayerStats = getFallbackPlayerStats();
-        console.log('Using fallback player stats');
-      }
-      
-      console.log('Final livePlayerStats:', livePlayerStats);
+      livePlayerStats = playerStats;
+      console.log('Final livePlayerStats (finished games only):', livePlayerStats);
       return livePlayerStats;
     }
 
-    // Helper function for fallback player stats
-    function getFallbackPlayerStats() {
-      return []; // Return empty array to trigger "Stats Unavailable" message
-    }
 
 
     // Update player stats display area
     function updatePlayerStatsDisplay() {
       const playerStatsElement = document.getElementById('playerStatsDisplay');
       const playerStatsSubtitle = document.getElementById('playerStatsSubtitle');
-      const leagueFilter = document.getElementById('tickerLeagueFilter');
+      const playerStatsSection = document.getElementById('playerStatsSection');
+      if (!playerStatsElement || !playerStatsSection) return;
       
-      
-      if (!playerStatsElement) return;
+      // Hide player stats section by default
+      playerStatsSection.style.display = 'none';
       
       if (livePlayerStats.length === 0) {
-        playerStatsElement.innerHTML = '<div style="color:#6c757d;text-align:center;padding:10px;">Stats Currently Unavailable</div>';
-        if (playerStatsSubtitle) playerStatsSubtitle.innerHTML = '';
-        return;
+        return; // Keep hidden if no stats available
       }
       
-      // Filter player stats by selected league and only show stats for games currently in ticker
-      const selectedLeague = leagueFilter ? leagueFilter.value : 'all';
-      let filteredStats = livePlayerStats.filter(stat => 
-        currentTickerGames.includes(stat.gameId) && 
-        (selectedLeague === 'all' || 
-         (selectedLeague === 'NBA' && stat.league === 'NBA') || 
-         (selectedLeague === 'NFL' && stat.league === 'NFL'))
-      );
+      const selectedLeague = window.selectedLeague || 'NFL';
+      
+      // Get the currently displayed game from the ticker
+      let currentGameId = null;
+      if (liveGameScores.length > 0) {
+        // Find the currently displayed game using the same logic as the ticker
+        let filteredScores;
+        
+        if (selectedLeague === 'NFL') {
+          const mondayNightGames = liveGameScores.filter(score => {
+            if (score.league !== 'NFL' || !score.isLive) return false;
+            const now = new Date();
+            const isMonday = now.getDay() === 1;
+            const isEvening = now.getHours() >= 19;
+            if (isMonday && isEvening) return true;
+            const liveNFLGames = liveGameScores.filter(s => s.league === 'NFL' && s.isLive);
+            if (liveNFLGames.length === 1 && score === liveNFLGames[0]) return true;
+            return false;
+          });
+          
+          if (mondayNightGames.length > 0) {
+            filteredScores = mondayNightGames;
+          } else {
+            filteredScores = liveGameScores.filter(score => score.league === 'NFL');
+          }
+        } else {
+          filteredScores = selectedLeague === 'all' 
+            ? liveGameScores 
+            : liveGameScores.filter(score => score.league === selectedLeague);
+        }
+        
+        if (filteredScores.length > 0) {
+          const currentScore = selectedLeague === 'NFL' && filteredScores.length === 1 
+            ? filteredScores[0] 
+            : filteredScores[tickerIndex % filteredScores.length];
+          currentGameId = currentScore.gameId;
+          
+          // Check if the current game is finished (not live)
+          // Only show player stats if the game is over
+          if (currentScore.isLive) {
+            // Game is still live, keep player stats section hidden
+            return;
+          }
+        }
+      }
+      
+      // Filter player stats to only show players from the currently displayed game
+      let filteredStats = livePlayerStats.filter(stat => {
+        if (selectedLeague !== 'all' && stat.league !== selectedLeague) return false;
+        if (currentGameId && stat.gameId !== currentGameId) return false;
+        return true;
+      });
       
       if (filteredStats.length === 0) {
-        playerStatsElement.innerHTML = `<div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">No ${selectedLeague} player stats available</div>`;
+        const gameText = currentGameId ? ' for this game' : '';
+        playerStatsElement.innerHTML = `<div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">No ${selectedLeague} player stats available${gameText}</div>`;
         if (playerStatsSubtitle) playerStatsSubtitle.innerHTML = '';
+        // Show the section even if no stats, since the game is finished
+        playerStatsSection.style.display = 'block';
         return;
       }
       
-      // Display top 2 performers
-      const topPerformers = filteredStats.slice(0, 2);
+      // Game is finished and we have stats, show the player stats section
+      playerStatsSection.style.display = 'block';
+      
+      // Group players by team
+      const teamGroups = {};
+      filteredStats.forEach(player => {
+        if (!teamGroups[player.team]) {
+          teamGroups[player.team] = [];
+        }
+        teamGroups[player.team].push(player);
+      });
+      
+      // Get team names and sort them
+      const teamNames = Object.keys(teamGroups);
+      
       let statsHtml = '';
       
-      topPerformers.forEach((player, index) => {
-        let playerText = '';
-        let liveIndicator = '';
+      // Display players grouped by team
+      teamNames.forEach((teamName, teamIndex) => {
+        const teamPlayers = teamGroups[teamName];
         
-        if (player.points !== undefined) {
-          // NBA stats
-          playerText = `${player.name} (${player.team}): ${player.points}PTS ${player.rebounds}REB ${player.assists}AST`;
-        } else if (player.passingYards !== undefined) {
-          // NFL QB stats
-          playerText = `${player.name} (${player.team}): ${player.passingYards}YDS ${player.passingTDs}TD`;
-        } else if (player.rushingYards !== undefined) {
-          // NFL RB stats
-          playerText = `${player.name} (${player.team}): ${player.rushingYards}YDS ${player.rushingTDs}TD`;
-        } else if (player.receivingYards !== undefined) {
-          // NFL WR stats
-          playerText = `${player.name} (${player.team}): ${player.receivingYards}YDS ${player.receivingTDs}TD`;
-        } else {
-          playerText = `${player.name} (${player.team})`;
+        // Add team header
+        statsHtml += `<div style="font-weight:600;color:#0d6efd;margin-bottom:4px;font-size:0.9rem;">${teamName}</div>`;
+        
+        // Add players for this team
+        teamPlayers.forEach((player, playerIndex) => {
+          let playerText = '';
+          let liveIndicator = '';
+          
+          if (player.points !== undefined) {
+            // NBA stats
+            playerText = `${player.name}: ${player.points}PTS ${player.rebounds}REB ${player.assists}AST`;
+          } else if (player.passingYards !== undefined) {
+            // NFL QB stats
+            const completions = player.completions || 0;
+            const attempts = player.attempts || 0;
+            const yards = player.passingYards || 0;
+            const tds = player.passingTDs || 0;
+            const ints = player.passingINTs || 0;
+            
+            playerText = `${player.name}: ${completions}-${attempts} ${yards}YDS ${tds}TD`;
+            if (ints > 0) {
+              playerText += ` ${ints}INT`;
+            }
+          } else if (player.rushingYards !== undefined) {
+            // NFL RB stats
+            const attempts = player.rushingAttempts || 0;
+            const yards = player.rushingYards || 0;
+            const tds = player.rushingTDs || 0;
+            playerText = `${player.name}: ${attempts} CAR ${yards} YDS ${tds} TD`;
+          } else if (player.receivingYards !== undefined) {
+            // NFL WR stats
+            const catches = player.receivingCatches || 0;
+            const yards = player.receivingYards || 0;
+            const tds = player.receivingTDs || 0;
+            playerText = `${player.name}: ${catches} REC ${yards} YDS ${tds} TD`;
+          } else {
+            playerText = `${player.name}`;
+          }
+          
+          // Live indicator removed per user request
+          
+          const color = player.isLive ? '#198754' : '#6c757d';
+          const fontSize = '0.8rem';
+          const marginBottom = '3px';
+          const marginLeft = '12px'; // Indent player stats under team name
+          
+          statsHtml += `<div style="margin-left:${marginLeft};margin-bottom:${marginBottom};color:${color};font-weight:500;font-size:${fontSize};">${playerText}${liveIndicator}</div>`;
+        });
+        
+        // Add separation between teams (except for the last team)
+        if (teamIndex < teamNames.length - 1) {
+          statsHtml += `<div style="margin:6px 0;border-top:1px solid #e9ecef;"></div>`;
         }
-        
-        // Add live indicator
-        if (player.isLive) {
-          liveIndicator = ' 🔴';
-        }
-        
-        const color = player.isLive ? '#198754' : '#6c757d';
-        statsHtml += `<div style="margin-bottom:6px;color:${color};font-weight:500;">${playerText}${liveIndicator}</div>`;
       });
       
       playerStatsElement.innerHTML = statsHtml;
       
       // Update subtitle
-      const liveCount = topPerformers.filter(p => p.isLive).length;
+      const liveCount = filteredStats.filter(p => p.isLive).length;
       if (liveCount > 0) {
-        playerStatsSubtitle.innerHTML = `<span style="color:#198754">🔴 ${liveCount} live performance${liveCount > 1 ? 's' : ''}</span>`;
+        playerStatsSubtitle.innerHTML = '';
       } else {
-        playerStatsSubtitle.innerHTML = 'Recent game performances';
+        playerStatsSubtitle.innerHTML = '';
       }
     }
 
@@ -1286,7 +1397,6 @@
     function updateLiveTicker() {
       const tickerElement = document.getElementById('liveTicker');
       const tickerSubtitle = document.getElementById('tickerSubtitle');
-      const leagueFilter = document.getElementById('tickerLeagueFilter');
       if (!tickerElement) return;
       
       // Always show game scores
@@ -1297,10 +1407,52 @@
       }
       
       // Filter scores by selected league
-      const selectedLeague = leagueFilter ? leagueFilter.value : 'all';
-      const filteredScores = selectedLeague === 'all' 
-        ? liveGameScores 
-        : liveGameScores.filter(score => score.league === selectedLeague);
+      const selectedLeague = window.selectedLeague || 'NFL';
+      let filteredScores;
+      
+      // Special logic for NFL: Show only Monday Night Football when it's live
+      if (selectedLeague === 'NFL') {
+        // Look for live Monday Night Football games
+        // MNF is typically the only live NFL game on Monday nights
+        const mondayNightGames = liveGameScores.filter(score => {
+          if (score.league !== 'NFL' || !score.isLive) return false;
+          
+          // Check if this is likely Monday Night Football by:
+          // 1. Being the only live NFL game (typical for MNF)
+          // 2. Being on a Monday (we'll check the current day)
+          // 3. Being a prime time game (later in the evening)
+          
+          const now = new Date();
+          const isMonday = now.getDay() === 1; // Monday is day 1
+          const isEvening = now.getHours() >= 19; // 7 PM or later
+          
+          // If it's Monday evening and there's a live NFL game, it's likely MNF
+          if (isMonday && isEvening) {
+            return true;
+          }
+          
+          // Also check if this is the only live NFL game (typical for MNF)
+          const liveNFLGames = liveGameScores.filter(s => s.league === 'NFL' && s.isLive);
+          if (liveNFLGames.length === 1 && score === liveNFLGames[0]) {
+            return true; // Single live NFL game is likely MNF
+          }
+          
+          return false;
+        });
+        
+        if (mondayNightGames.length > 0) {
+          // Show only the Monday Night Football game
+          filteredScores = mondayNightGames;
+        } else {
+          // No live Monday Night Football, show all NFL games
+          filteredScores = liveGameScores.filter(score => score.league === 'NFL');
+        }
+      } else {
+        // For other leagues or 'all', use normal filtering
+        filteredScores = selectedLeague === 'all' 
+          ? liveGameScores 
+          : liveGameScores.filter(score => score.league === selectedLeague);
+      }
       
       // Check if we have scores for the selected filter
       if (filteredScores.length === 0) {
@@ -1310,8 +1462,10 @@
         return;
       }
       
-      // Rotate through filtered scores
-      const currentScore = filteredScores[tickerIndex % filteredScores.length];
+      // For Monday Night Football, don't rotate - just show the single game
+      const currentScore = selectedLeague === 'NFL' && filteredScores.length === 1 
+        ? filteredScores[0] 
+        : filteredScores[tickerIndex % filteredScores.length];
       
       // Format with league prefix (only if showing all leagues)
       const displayText = selectedLeague === 'all'
@@ -1326,20 +1480,27 @@
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#dc3545">Sample data (API unavailable)</span>';
       } else if (currentScore.isLive) {
         tickerElement.style.color = '#198754'; // Green for live games
-        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE ESPN scoreboard</span>';
+        if (selectedLeague === 'NFL' && filteredScores.length === 1) {
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE Monday Night Football</span>';
+        } else {
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE ESPN scoreboard</span>';
+        }
       } else {
         tickerElement.style.color = '#000'; // Black for completed
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">✓ Live ESPN scoreboard</span>';
       }
       
-      tickerIndex++;
+      // Only increment ticker index if we're rotating through multiple games
+      if (selectedLeague !== 'NFL' || filteredScores.length > 1) {
+        tickerIndex++;
+      }
     }
 
     // Initial fetch of game scores and player stats
     fetchLiveGameScores().then(() => {
       updateLiveTicker();
       // Fetch player stats after game scores are loaded
-      return fetchLivePlayerStats();
+      return fetchFinishedGamePlayerStats();
     }).then(() => {
       updatePlayerStatsDisplay();
     });
@@ -1355,15 +1516,37 @@
     
     // Refresh player stats every 2 minutes (same as score ticker)
     setInterval(() => {
-      fetchLivePlayerStats().then(() => {
+      fetchFinishedGamePlayerStats().then(() => {
         updatePlayerStatsDisplay();
       });
     }, 120000);
 
     // League filter change listener
     const tickerLeagueFilter = document.getElementById('tickerLeagueFilter');
-    if (tickerLeagueFilter) {
-      tickerLeagueFilter.addEventListener('change', () => {
+    // Handle league button clicks
+    const nflButton = document.getElementById('nflButton');
+    const nbaButton = document.getElementById('nbaButton');
+    
+    if (nflButton && nbaButton) {
+      nflButton.addEventListener('click', () => {
+        // Update button states
+        nflButton.classList.add('active');
+        nbaButton.classList.remove('active');
+        
+        // Set league filter and update display
+        window.selectedLeague = 'NFL';
+        tickerIndex = 0; // Reset rotation when filter changes
+        updateLiveTicker(); // Immediately update display
+        updatePlayerStatsDisplay(); // Update player stats too
+      });
+      
+      nbaButton.addEventListener('click', () => {
+        // Update button states
+        nbaButton.classList.add('active');
+        nflButton.classList.remove('active');
+        
+        // Set league filter and update display
+        window.selectedLeague = 'NBA';
         tickerIndex = 0; // Reset rotation when filter changes
         updateLiveTicker(); // Immediately update display
         updatePlayerStatsDisplay(); // Update player stats too
