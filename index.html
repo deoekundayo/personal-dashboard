@@ -55,142 +55,140 @@
     <header>
       <img id="profileImg" class="profile-pic" src="deo.jpeg" alt="Deo">
       <div>
-        <h3 style="margin:0">Adeola (Deo) Ekundayo</h3>
+        <h3 style="margin:0"><a href="https://www.linkedin.com/in/adeolaekundayo" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;cursor:pointer;" title="View LinkedIn Profile">Adeola (Deo) Ekundayo</a></h3>
         <div style="color:#6c757d">Charlotte, NC — 🎧 Music | 🏀 🏈 Sports | 📊 Data</div>
       </div>
     </header>
 
     <div class="row g-3">
-      <div class="col-lg-3">
-        <div class="side-panel">
-          <div class="section-title">Spotify</div>
-          <div>
-            <input id="spotifyInput" class="form-control mb-2" placeholder="Paste Spotify playlist URL">
-            <button id="embedBtn" class="btn btn-sm btn-outline-primary w-100">Embed Playlist</button>
-            <div id="spotifyEmbedWrap" style="margin-top:10px; max-width: 100%; overflow: hidden;"></div>
-          </div>
-
-          
-        </div>
-      </div>
-
-      <div class="col-lg-9">
+      <!-- KPI Cards Row -->
+      <div class="col-12">
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
               <div style="font-size:0.9rem;color:#6c757d">Current Temperature</div>
               <div id="kpiCurrentTemp" style="font-size:1.6rem;font-weight:700">Loading...</div>
               <div id="weatherSubtitle" style="font-size:0.85rem;color:#888">Charlotte, NC</div>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
-              <div style="font-size:0.9rem;color:#6c757d">Favorite Interest</div>
-              <div style="font-size:1.2rem;font-weight:700">Music & Sports</div>
-              <div style="font-size:0.85rem;color:#888">Playlists & Scores</div>
+              <div id="liveUpdatesText" style="font-size:1.2rem;font-weight:700;cursor:pointer;" title="Click to view live scores">Live Score Updates</div>
+              <div style="font-size:0.85rem;color:#888">NBA & NFL Scores</div>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <div class="kpi text-center" style="min-height:120px;display:flex;flex-direction:column;justify-content:center;">
-              <div style="font-size:0.9rem;color:#6c757d">Sports & Scores</div>
-              <div style="font-size:1.2rem;font-weight:700">Live Updates</div>
-              <div style="font-size:0.85rem;color:#888">Scores & Stats</div>
+              <div id="teamStatsText" style="font-size:1.2rem;font-weight:700;cursor:pointer;" title="Click to view team standings">Team Stats</div>
+              <div style="font-size:0.85rem;color:#888">NBA & NFL Standings & Stats</div>
             </div>
           </div>
-
-          <div class="col-12">
-            <div class="chart-card" style="height: 500px; position: relative;">
-              <div class="small-muted" style="position: absolute; top: 12px; right: 12px; font-size: 0.8rem;">Hover a point to see the day</div>
-              <div class="d-flex align-items-start mb-3" style="margin-top: 8px;">
-                <div>
-                  <div class="section-title">Monthly Weather — Daily Highs & Lows</div>
-                  <div style="color:#6c757d;font-size:0.9rem; margin-bottom: 8px;">Charlotte, selected month</div>
-                  <label class="small-muted" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Select Month:</label>
-                  <select id="monthSelect" class="form-select mb-2" style="width: 200px; font-size: 0.85rem;">
-                  </select>
-                </div>
-              </div>
-              <div style="height: 330px; position: relative;">
-                <canvas id="weatherChartLarge" style="max-height: 100%; width: 100%;"></canvas>
+          <div class="col-md-3">
+            <div class="side-panel" style="min-height:120px;display:flex;flex-direction:column;justify-content:flex-start;">
+              <div class="section-title">Spotify</div>
+              <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
+                <input id="spotifyInput" class="form-control mb-2" placeholder="Paste Spotify playlist URL">
+                <button id="embedBtn" class="btn btn-sm btn-outline-primary w-100">Embed Playlist</button>
+                <div id="spotifyEmbedWrap" style="margin-top:10px; max-width: 100%; overflow: hidden;"></div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="col-12">
-            <div class="chart-card" style="position:relative;min-height:200px;">
-              <!-- Score Display Section -->
-              <div style="text-align:center;margin-bottom:20px;">
-                <div style="display:flex;justify-content:center;margin-bottom:8px;">
-                  <div class="league-segmented-control">
-                    <button id="nflButton" class="league-button active" data-league="NFL">NFL</button>
-                    <button id="nbaButton" class="league-button" data-league="NBA">NBA</button>
-                  </div>
-                </div>
-                <div style="font-size:0.9rem;color:#6c757d;margin-bottom:8px;">Live Score</div>
-                <div id="liveTicker" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">Loading scores...</div>
-                <div id="tickerSubtitle" style="font-size:0.85rem;color:#198754;">Live ESPN scoreboard</div>
-              </div>
-              
-              <!-- Player Stats Section (Hidden by default, shown only when game is over) -->
-              <div id="playerStatsSection" style="border-top:1px solid #e9ecef;padding-top:16px;display:none;">
-                <div style="text-align:center;">
-                  <div style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Player Stats</div>
-                  <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.4;min-height:40px;">
-                    <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
-                  </div>
-                  <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
-                </div>
-              </div>
+      <!-- Weather Chart Row -->
+      <div class="col-12">
+        <div id="weatherChartSection" class="chart-card" style="height: 500px; position: relative;">
+          <div class="small-muted" style="position: absolute; top: 12px; right: 12px; font-size: 0.8rem;">Hover a point to see the day</div>
+          <div class="d-flex align-items-start mb-3" style="margin-top: 8px;">
+            <div>
+              <div class="section-title">Monthly Weather — Daily Highs & Lows</div>
+              <div style="color:#6c757d;font-size:0.9rem; margin-bottom: 8px;">Charlotte, selected month</div>
+              <label class="small-muted" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Select Month:</label>
+              <select id="monthSelect" class="form-select mb-2" style="width: 200px; font-size: 0.85rem;">
+              </select>
             </div>
           </div>
+          <div style="height: 330px; position: relative;">
+            <canvas id="weatherChartLarge" style="max-height: 100%; width: 100%;"></canvas>
+          </div>
+        </div>
+      </div>
 
-          <div class="col-12" style="margin-top: 20px;">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="chart-card" style="height:540px">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="section-title">NFL Snapshot</div>
-                    <button id="refreshNFL" class="btn btn-sm btn-outline-primary">Refresh</button>
-                  </div>
-                  <div id="nflSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NFL standings from ESPN API</div>
-                  <input id="nflSearch" class="form-control form-control-sm mb-2" placeholder="Search NFL teams..." style="font-size:0.85rem">
-                  <div style="overflow:auto;max-height:420px">
-                    <table class="table table-sm">
-                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr></thead>
-                      <tbody id="nflBody"></tbody>
-                    </table>
-                  </div>
-                </div>
+      <!-- Score Ticker Row -->
+      <div class="col-12">
+        <div id="scoreTickerSection" class="chart-card" style="position:relative;min-height:200px;">
+          <!-- Score Display Section -->
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="display:flex;justify-content:center;margin-bottom:8px;">
+              <div class="league-segmented-control">
+                <button id="nflButton" class="league-button active" data-league="NFL">NFL</button>
+                <button id="nbaButton" class="league-button" data-league="NBA">NBA</button>
               </div>
+            </div>
+            <div style="font-size:0.9rem;color:#6c757d;margin-bottom:8px;">Live Score</div>
+            <div id="liveTicker" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">Loading scores...</div>
+            <div id="tickerSubtitle" style="font-size:0.85rem;color:#6c757d;">Loading...</div>
+          </div>
+          
+          <!-- Player Stats Section (Hidden by default, shown only when game is over) -->
+          <div id="playerStatsSection" style="border-top:1px solid #e9ecef;padding-top:16px;display:none;">
+            <div style="text-align:center;">
+              <div style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Player Stats</div>
+              <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.4;min-height:40px;">
+                <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
+              </div>
+              <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <div class="col-md-6">
-                <div class="chart-card" style="height:540px">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="section-title">NBA Snapshot</div>
-                    <button id="refreshNBA" class="btn btn-sm btn-outline-primary">Refresh</button>
-                  </div>
-                  <div id="nbaSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NBA standings from ESPN API</div>
-                  <input id="nbaSearch" class="form-control form-control-sm mb-2" placeholder="Search NBA teams..." style="font-size:0.85rem">
-                  <div style="overflow:auto;max-height:420px">
-                    <table class="table table-sm">
-                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>PTS</th><th>OPP</th></tr></thead>
-                      <tbody id="nbaBody"></tbody>
-                    </table>
-                  </div>
-                </div>
+      <!-- Sports Tables Row -->
+      <div class="col-12">
+        <div id="sportsTablesSection" class="row g-3">
+          <div class="col-lg-6">
+            <div id="nflSnapshotCard" class="chart-card" style="height:540px">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="section-title">NFL Snapshot</div>
+                <button id="refreshNFL" class="btn btn-sm btn-outline-primary">Refresh</button>
+              </div>
+              <div id="nflSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NFL standings from ESPN API</div>
+              <input id="nflSearch" class="form-control form-control-sm mb-2" placeholder="Search NFL teams..." style="font-size:0.85rem">
+              <div style="overflow:auto;max-height:420px">
+                <table class="table table-sm">
+                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr></thead>
+                  <tbody id="nflBody"></tbody>
+                </table>
               </div>
             </div>
           </div>
 
-
-          <div class="col-12" id="teamSearchResults" style="display:none">
-            <div class="chart-card">
-              <div class="section-title" id="teamSearchTitle">Team Search Results</div>
-              <div style="font-size:0.85rem;color:#6c757d;margin-bottom:8px" id="teamSearchSubtitle">Current season stats</div>
-              <div id="teamStatsDisplay"></div>
+          <div class="col-lg-6">
+            <div class="chart-card" style="height:540px">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="section-title">NBA Snapshot</div>
+                <button id="refreshNBA" class="btn btn-sm btn-outline-primary">Refresh</button>
+              </div>
+              <div id="nbaSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NBA standings from ESPN API</div>
+              <input id="nbaSearch" class="form-control form-control-sm mb-2" placeholder="Search NBA teams..." style="font-size:0.85rem">
+              <div style="overflow:auto;max-height:420px">
+                <table class="table table-sm">
+                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>PTS</th><th>OPP</th></tr></thead>
+                  <tbody id="nbaBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
+      <!-- Team Search Results Row -->
+      <div class="col-12" id="teamSearchResults" style="display:none">
+        <div class="chart-card">
+          <div class="section-title" id="teamSearchTitle">Team Search Results</div>
+          <div style="font-size:0.85rem;color:#6c757d;margin-bottom:8px" id="teamSearchSubtitle">Current season stats</div>
+          <div id="teamStatsDisplay"></div>
         </div>
       </div>
     </div>
@@ -1483,11 +1481,11 @@
         if (selectedLeague === 'NFL' && filteredScores.length === 1) {
           if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE Monday Night Football</span>';
         } else {
-          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE ESPN scoreboard</span>';
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE</span>';
         }
       } else {
         tickerElement.style.color = '#000'; // Black for completed
-        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">✓ Live ESPN scoreboard</span>';
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Scoreboard</span>';
       }
       
       // Only increment ticker index if we're rotating through multiple games
@@ -1574,11 +1572,95 @@
     // Expose a console helper to programmatically set a Spotify playlist
     window.embedSpotify = function(url){ document.getElementById('spotifyInput').value = url; document.getElementById('embedBtn').click(); };
     
+    // Add click functionality to temperature number to scroll to weather chart
+    document.addEventListener('DOMContentLoaded', function() {
+      const tempElement = document.getElementById('kpiCurrentTemp');
+      if (tempElement) {
+        tempElement.style.cursor = 'pointer';
+        tempElement.title = 'Click to view weather chart';
+        
+        tempElement.addEventListener('click', function() {
+          const weatherChartSection = document.getElementById('weatherChartSection');
+          if (weatherChartSection) {
+            weatherChartSection.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      }
+      
+      // Add click functionality to "Live Updates" text to scroll to score ticker
+      const liveUpdatesElement = document.getElementById('liveUpdatesText');
+      if (liveUpdatesElement) {
+        liveUpdatesElement.addEventListener('click', function() {
+          const scoreTickerSection = document.getElementById('scoreTickerSection');
+          if (scoreTickerSection) {
+            scoreTickerSection.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      }
+      
+      // Add click functionality to "Team Stats" text to scroll to NFL snapshot
+      const teamStatsElement = document.getElementById('teamStatsText');
+      if (teamStatsElement) {
+        teamStatsElement.addEventListener('click', function() {
+          const nflSnapshotCard = document.getElementById('nflSnapshotCard');
+          if (nflSnapshotCard) {
+            nflSnapshotCard.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      }
+      
+      // Back to Top Button functionality
+      const backToTopBtn = document.getElementById('backToTopBtn');
+      
+      // Show/hide button based on scroll position
+      window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) { // Show button after scrolling 300px
+          backToTopBtn.style.display = 'block';
+        } else {
+          backToTopBtn.style.display = 'none';
+        }
+      });
+      
+      // Scroll to top when button is clicked
+      backToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    });
 
     // initial render
     refreshAll();
     
 
   </script>
+
+  <!-- Back to Top Button -->
+  <button id="backToTopBtn" class="btn btn-primary" style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: none;
+    font-size: 18px;
+    transition: all 0.3s ease;
+  " title="Back to top">
+    ↑
+  </button>
 </body>
 </html>
