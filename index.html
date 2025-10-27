@@ -126,7 +126,7 @@
                 <button id="nbaButton" class="league-button" data-league="NBA">NBA</button>
               </div>
             </div>
-            <div style="font-size:0.9rem;color:#6c757d;margin-bottom:8px;">Live Score</div>
+           
             <div id="liveTicker" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">Loading scores...</div>
             <div id="tickerSubtitle" style="font-size:0.85rem;color:#6c757d;">Loading...</div>
           </div>
@@ -1112,10 +1112,23 @@
                                                status.includes('LIVE') ||
                                                status.includes('IN PROGRESS');
                     
+                    // Check if game is scheduled/future
+                    const isFuture = competition.status.type.state === 'scheduled' || 
+                                   competition.status.type.state === 'pre' ||
+                                   status.includes('Scheduled') ||
+                                   status.includes('Tomorrow') ||
+                                   (homeScore === '0' && awayScore === '0' && !isCurrentlyInProgress && !status.includes('FINAL') && !status.includes('Final'));
+                    
+                    // Format text with or without scores based on game status
+                    const gameText = isFuture 
+                      ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation} (${status})`
+                      : `${awayTeam.team.abbreviation} ${awayScore} @ ${homeScore} ${homeTeam.team.abbreviation} (${status})`;
+                    
                     scores.push({
                       league: 'NFL',
-                      text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
+                      text: gameText,
                       isLive: isCurrentlyInProgress,
+                      isFuture: isFuture,
                       gameId: event.id
                     });
                   }
@@ -1166,10 +1179,23 @@
                                                status.includes('LIVE') ||
                                                status.includes('IN PROGRESS');
                     
+                    // Check if game is scheduled/future
+                    const isFuture = competition.status.type.state === 'scheduled' || 
+                                   competition.status.type.state === 'pre' ||
+                                   status.includes('Scheduled') ||
+                                   status.includes('Tomorrow') ||
+                                   (homeScore === '0' && awayScore === '0' && !isCurrentlyInProgress && !status.includes('FINAL') && !status.includes('Final'));
+                    
+                    // Format text with or without scores based on game status
+                    const gameText = isFuture 
+                      ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation} (${status})`
+                      : `${awayTeam.team.abbreviation} ${awayScore} @ ${homeScore} ${homeTeam.team.abbreviation} (${status})`;
+                    
                     scores.push({
                       league: 'NBA',
-                      text: `${awayTeam.team.abbreviation} ${awayScore} — ${homeScore} ${homeTeam.team.abbreviation} (${status})`,
+                      text: gameText,
                       isLive: isCurrentlyInProgress,
+                      isFuture: isFuture,
                       gameId: event.id
                     });
                   }
@@ -1506,18 +1532,21 @@
         if (isCurrentlyInProgress) {
           tickerElement.style.color = '#198754'; // Green for live games
           if (selectedLeague === 'NFL' && filteredScores.length === 1) {
-            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE Monday Night Football</span>';
+            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">● Live Game — Monday Night Football</span>';
           } else {
-            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🔴 LIVE</span>';
+            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">● Live Game</span>';
           }
         } else {
           // Game is live but not currently in progress (e.g., pre-game, halftime, etc.)
           tickerElement.style.color = '#000'; // Black for non-active live games
-          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Scoreboard</span>';
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">● Completed Game</span>';
         }
+      } else if (currentScore.isFuture) {
+        tickerElement.style.color = '#000'; // Black for future games
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#000">● Future Game</span>';
       } else {
         tickerElement.style.color = '#000'; // Black for completed
-        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">Scoreboard</span>';
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">● Completed Game</span>';
       }
       
       // Only increment ticker index if we're rotating through multiple games
