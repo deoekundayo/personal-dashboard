@@ -1089,7 +1089,7 @@
           console.log('NFL scores received:', nflData);
           
           if (nflData.events && nflData.events.length > 0) {
-            nflData.events.slice(0, 5).forEach(event => {
+            nflData.events.forEach(event => {
               if (event.competitions && event.competitions[0]) {
                 const competition = event.competitions[0];
                 const competitors = competition.competitors;
@@ -1100,24 +1100,40 @@
                   
                   if (homeTeam && awayTeam) {
                     const status = competition.status.type.shortDetail || competition.status.type.detail;
+                    const state = competition.status.type.state;
                     const homeScore = homeTeam.score || '0';
                     const awayScore = awayTeam.score || '0';
                     
-                    // Only mark as live if the game is actually in progress
-                    const isCurrentlyInProgress = competition.status.type.state === 'in' || 
-                                               competition.status.type.state === 'live' ||
+                    console.log(`NFL Game: ${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`);
+                    console.log(`State: ${state}, Status: ${status}, Scores: ${awayScore} - ${homeScore}`);
+                    
+                    // Check if game is completed/final
+                    const isCompleted = state === 'post' || 
+                                      state === 'final' ||
+                                      status.includes('FINAL') || 
+                                      status.includes('Final') ||
+                                      status.includes('END') ||
+                                      competition.status.type.completed;
+                    
+                    // Only mark as live if the game is actually in progress (not completed and not scheduled)
+                    const isCurrentlyInProgress = !isCompleted && (
+                                               state === 'in' || 
+                                               state === 'live' ||
+                                               state === 'in-progress' ||
                                                status.includes('Q') || 
                                                status.includes('HALF') || 
                                                status.includes('OT') ||
                                                status.includes('LIVE') ||
-                                               status.includes('IN PROGRESS');
+                                               status.includes('IN PROGRESS'));
                     
                     // Check if game is scheduled/future
-                    const isFuture = competition.status.type.state === 'scheduled' || 
-                                   competition.status.type.state === 'pre' ||
+                    const isFuture = state === 'scheduled' || 
+                                   state === 'pre' ||
+                                   state === 'preview' ||
                                    status.includes('Scheduled') ||
                                    status.includes('Tomorrow') ||
-                                   (homeScore === '0' && awayScore === '0' && !isCurrentlyInProgress && !status.includes('FINAL') && !status.includes('Final'));
+                                   status.includes('TBD') ||
+                                   (parseInt(homeScore) === 0 && parseInt(awayScore) === 0 && !isCurrentlyInProgress && !isCompleted);
                     
                     // Format text with or without scores based on game status
                     const gameText = isFuture 
@@ -1131,6 +1147,8 @@
                       isFuture: isFuture,
                       gameId: event.id
                     });
+                    
+                    console.log(`Added: ${gameText}, isLive: ${isCurrentlyInProgress}, isFuture: ${isFuture}`);
                   }
                 }
               }
@@ -1156,7 +1174,7 @@
           console.log('NBA scores received:', nbaData);
           
           if (nbaData.events && nbaData.events.length > 0) {
-            nbaData.events.slice(0, 5).forEach(event => {
+            nbaData.events.forEach(event => {
               if (event.competitions && event.competitions[0]) {
                 const competition = event.competitions[0];
                 const competitors = competition.competitors;
@@ -1167,24 +1185,40 @@
                   
                   if (homeTeam && awayTeam) {
                     const status = competition.status.type.shortDetail || competition.status.type.detail;
+                    const state = competition.status.type.state;
                     const homeScore = homeTeam.score || '0';
                     const awayScore = awayTeam.score || '0';
                     
-                    // Only mark as live if the game is actually in progress
-                    const isCurrentlyInProgress = competition.status.type.state === 'in' || 
-                                               competition.status.type.state === 'live' ||
+                    console.log(`NBA Game: ${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`);
+                    console.log(`State: ${state}, Status: ${status}, Scores: ${awayScore} - ${homeScore}`);
+                    
+                    // Check if game is completed/final
+                    const isCompleted = state === 'post' || 
+                                      state === 'final' ||
+                                      status.includes('FINAL') || 
+                                      status.includes('Final') ||
+                                      status.includes('END') ||
+                                      competition.status.type.completed;
+                    
+                    // Only mark as live if the game is actually in progress (not completed and not scheduled)
+                    const isCurrentlyInProgress = !isCompleted && (
+                                               state === 'in' || 
+                                               state === 'live' ||
+                                               state === 'in-progress' ||
                                                status.includes('Q') || 
                                                status.includes('HALF') || 
                                                status.includes('OT') ||
                                                status.includes('LIVE') ||
-                                               status.includes('IN PROGRESS');
+                                               status.includes('IN PROGRESS'));
                     
                     // Check if game is scheduled/future
-                    const isFuture = competition.status.type.state === 'scheduled' || 
-                                   competition.status.type.state === 'pre' ||
+                    const isFuture = state === 'scheduled' || 
+                                   state === 'pre' ||
+                                   state === 'preview' ||
                                    status.includes('Scheduled') ||
                                    status.includes('Tomorrow') ||
-                                   (homeScore === '0' && awayScore === '0' && !isCurrentlyInProgress && !status.includes('FINAL') && !status.includes('Final'));
+                                   status.includes('TBD') ||
+                                   (parseInt(homeScore) === 0 && parseInt(awayScore) === 0 && !isCurrentlyInProgress && !isCompleted);
                     
                     // Format text with or without scores based on game status
                     const gameText = isFuture 
@@ -1198,6 +1232,8 @@
                       isFuture: isFuture,
                       gameId: event.id
                     });
+                    
+                    console.log(`Added: ${gameText}, isLive: ${isCurrentlyInProgress}, isFuture: ${isFuture}`);
                   }
                 }
               }
