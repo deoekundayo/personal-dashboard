@@ -1521,32 +1521,19 @@
         tickerElement.style.color = '#6c757d';
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#dc3545">Sample data (API unavailable)</span>';
       } else if (currentScore.isLive) {
-        // Only show live indicator for games that are actually in progress
-        // Check if the game status indicates it's currently being played
-        const isCurrentlyInProgress = currentScore.text.includes('Q') || 
-                                     currentScore.text.includes('HALF') || 
-                                     currentScore.text.includes('OT') ||
-                                     currentScore.text.includes('LIVE') ||
-                                     currentScore.text.includes('IN PROGRESS');
-        
-        if (isCurrentlyInProgress) {
-          tickerElement.style.color = '#198754'; // Green for live games
-          if (selectedLeague === 'NFL' && filteredScores.length === 1) {
-            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">● Live Game — Monday Night Football</span>';
-          } else {
-            if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">● Live Game</span>';
-          }
+        // Show live indicator for all live games
+        tickerElement.style.color = '#198754'; // Green for live games
+        if (selectedLeague === 'NFL' && filteredScores.length === 1) {
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🟢 Live Game — Monday Night Football</span>';
         } else {
-          // Game is live but not currently in progress (e.g., pre-game, halftime, etc.)
-          tickerElement.style.color = '#000'; // Black for non-active live games
-          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">● Completed Game</span>';
+          if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🟢 Live Game</span>';
         }
       } else if (currentScore.isFuture) {
-        tickerElement.style.color = '#000'; // Black for future games
-        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#000">● Future Game</span>';
+        tickerElement.style.color = '#4da6ff'; // Light blue for future games
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#4da6ff">🔵 Future Game</span>';
       } else {
-        tickerElement.style.color = '#000'; // Black for completed
-        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">● Completed Game</span>';
+        tickerElement.style.color = '#6c757d'; // Gray for completed games
+        if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">⚪️ Completed Game</span>';
       }
       
       // Only increment ticker index if we're rotating through multiple games
