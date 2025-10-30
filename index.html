@@ -156,8 +156,8 @@
               <div id="nflSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NFL standings from ESPN API</div>
               <input id="nflSearch" class="form-control form-control-sm mb-2" placeholder="Search NFL teams..." style="font-size:0.85rem">
               <div style="overflow:auto;max-height:420px">
-                <table class="table table-sm">
-                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr></thead>
+                <table class="table table-sm" style="font-size:0.8rem;">
+                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Streak</th><th>Div</th><th>Conf</th><th>Home</th><th>Road</th></tr></thead>
                   <tbody id="nflBody"></tbody>
                 </table>
               </div>
@@ -173,8 +173,8 @@
               <div id="nbaSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NBA standings from ESPN API</div>
               <input id="nbaSearch" class="form-control form-control-sm mb-2" placeholder="Search NBA teams..." style="font-size:0.85rem">
               <div style="overflow:auto;max-height:420px">
-                <table class="table table-sm">
-                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>PTS</th><th>OPP</th></tr></thead>
+                <table class="table table-sm" style="font-size:0.8rem;">
+                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>PTS</th><th>OPP</th><th>Streak</th><th>Div</th><th>Conf</th><th>Home</th><th>Road</th></tr></thead>
                   <tbody id="nbaBody"></tbody>
                 </table>
               </div>
@@ -514,17 +514,17 @@
 
     // Sample fallback data
     const nflSample = [
-      {team:'Eagles',w:6,l:1,pf:198,pa:140},
-      {team:'Bengals',w:5,l:2,pf:172,pa:150},
-      {team:'Bills',w:5,l:2,pf:180,pa:148},
-      {team:'49ers',w:5,l:2,pf:165,pa:138}
+      {team:'Eagles',w:6,l:1,pf:198,pa:140,streak:'W3',divRecord:'2-0',confRecord:'4-1',homeRecord:'4-0',roadRecord:'2-1'},
+      {team:'Bengals',w:5,l:2,pf:172,pa:150,streak:'W2',divRecord:'2-1',confRecord:'4-2',homeRecord:'3-1',roadRecord:'2-1'},
+      {team:'Bills',w:5,l:2,pf:180,pa:148,streak:'L1',divRecord:'1-1',confRecord:'4-1',homeRecord:'2-1',roadRecord:'3-1'},
+      {team:'49ers',w:5,l:2,pf:165,pa:138,streak:'W1',divRecord:'1-1',confRecord:'3-2',homeRecord:'3-1',roadRecord:'2-1'}
     ];
 
     const nbaSample = [
-      {team:'Lakers',w:8,l:2,pts:112,opp:104},
-      {team:'Bucks',w:7,l:3,pts:110,opp:106},
-      {team:'Celtics',w:7,l:3,pts:111,opp:107},
-      {team:'Nuggets',w:6,l:4,pts:108,opp:105}
+      {team:'Lakers',w:8,l:2,gb:'0.0',pts:112,opp:104,streak:'W3',divRecord:'2-0',confRecord:'6-1',homeRecord:'5-0',roadRecord:'3-2'},
+      {team:'Bucks',w:7,l:3,gb:'1.0',pts:110,opp:106,streak:'W1',divRecord:'2-1',confRecord:'5-2',homeRecord:'4-1',roadRecord:'3-2'},
+      {team:'Celtics',w:7,l:3,gb:'1.0',pts:111,opp:107,streak:'L1',divRecord:'2-1',confRecord:'5-2',homeRecord:'4-1',roadRecord:'3-2'},
+      {team:'Nuggets',w:6,l:4,gb:'2.0',pts:108,opp:105,streak:'W2',divRecord:'1-1',confRecord:'4-3',homeRecord:'3-2',roadRecord:'3-2'}
     ];
 
     // Fetch live NFL data from ESPN API
@@ -553,12 +553,145 @@
                   if (division.standings && division.standings.entries) {
                     division.standings.entries.forEach(team => {
                       const stats = team.stats || [];
+                      
+                      // Debug: Log all available stats for first team to see structure
+                      if (standings.length === 0) {
+                        console.log('First team stats:', stats);
+                        console.log('Team record items:', team.record?.items);
+                        console.log('Full team object keys:', Object.keys(team));
+                      }
+                      
+                      // Get streak - try multiple variations
+                      const streakStat = stats.find(s => 
+                        s.name === 'streak' || 
+                        s.abbreviation === 'STRK' || 
+                        s.name === 'currentStreak' ||
+                        s.displayName?.toLowerCase().includes('streak') ||
+                        s.type === 'streak'
+                      );
+                      const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
+                      
+                      // Get division record - check record.items or stats
+                      let divWins = 0, divLosses = 0;
+                      const divWinsStat = stats.find(s => 
+                        s.name === 'divisionWins' || 
+                        s.abbreviation === 'DIV_W' ||
+                        s.name === 'divWins' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const divLossesStat = stats.find(s => 
+                        s.name === 'divisionLosses' || 
+                        s.abbreviation === 'DIV_L' ||
+                        s.name === 'divLosses' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
+                      divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
+                      
+                      // Check if division record is stored in team.record
+                      if ((divWins === 0 && divLosses === 0) && team.record && team.record.items) {
+                        const divRecord = team.record.items.find(r => r.type === 'division');
+                        if (divRecord && divRecord.stats) {
+                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
+                      
+                      // Get conference record
+                      let confWins = 0, confLosses = 0;
+                      const confWinsStat = stats.find(s => 
+                        s.name === 'conferenceWins' || 
+                        s.abbreviation === 'CONF_W' ||
+                        s.name === 'confWins' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const confLossesStat = stats.find(s => 
+                        s.name === 'conferenceLosses' || 
+                        s.abbreviation === 'CONF_L' ||
+                        s.name === 'confLosses' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
+                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
+                      
+                      // Check if conference record is stored in team.record
+                      if ((confWins === 0 && confLosses === 0) && team.record && team.record.items) {
+                        const confRecord = team.record.items.find(r => r.type === 'conference');
+                        if (confRecord && confRecord.stats) {
+                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
+                      
+                      // Get home record
+                      let homeWins = 0, homeLosses = 0;
+                      const homeWinsStat = stats.find(s => 
+                        s.name === 'homeWins' || 
+                        s.abbreviation === 'HOME_W' ||
+                        s.name === 'homeRecordWins' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const homeLossesStat = stats.find(s => 
+                        s.name === 'homeLosses' || 
+                        s.abbreviation === 'HOME_L' ||
+                        s.name === 'homeRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      homeWins = parseInt(homeWinsStat?.value || homeWinsStat?.displayValue || 0);
+                      homeLosses = parseInt(homeLossesStat?.value || homeLossesStat?.displayValue || 0);
+                      
+                      // Check if home record is stored in team.record
+                      if ((homeWins === 0 && homeLosses === 0) && team.record && team.record.items) {
+                        const homeRecordItem = team.record.items.find(r => r.type === 'home' || r.type === 'homeRecord');
+                        if (homeRecordItem && homeRecordItem.stats) {
+                          homeWins = parseInt(homeRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          homeLosses = parseInt(homeRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const homeRecord = homeWins || homeLosses ? `${homeWins}-${homeLosses}` : '0-0';
+                      
+                      // Get road/away record
+                      let roadWins = 0, roadLosses = 0;
+                      const roadWinsStat = stats.find(s => 
+                        s.name === 'awayWins' || 
+                        s.abbreviation === 'AWAY_W' || 
+                        s.name === 'roadWins' ||
+                        s.name === 'roadRecordWins' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      const roadLossesStat = stats.find(s => 
+                        s.name === 'awayLosses' || 
+                        s.abbreviation === 'AWAY_L' || 
+                        s.name === 'roadLosses' ||
+                        s.name === 'roadRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      roadWins = parseInt(roadWinsStat?.value || roadWinsStat?.displayValue || 0);
+                      roadLosses = parseInt(roadLossesStat?.value || roadLossesStat?.displayValue || 0);
+                      
+                      // Check if away record is stored in team.record
+                      if ((roadWins === 0 && roadLosses === 0) && team.record && team.record.items) {
+                        const awayRecordItem = team.record.items.find(r => r.type === 'away' || r.type === 'road' || r.type === 'awayRecord');
+                        if (awayRecordItem && awayRecordItem.stats) {
+                          roadWins = parseInt(awayRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          roadLosses = parseInt(awayRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const roadRecord = roadWins || roadLosses ? `${roadWins}-${roadLosses}` : '0-0';
+                      
                       standings.push({
                         team: team.team.displayName,
                         w: parseInt(stats.find(s => s.name === 'wins')?.value || stats.find(s => s.abbreviation === 'W')?.value || 0),
                         l: parseInt(stats.find(s => s.name === 'losses')?.value || stats.find(s => s.abbreviation === 'L')?.value || 0),
                         pf: parseInt(stats.find(s => s.name === 'pointsFor')?.value || stats.find(s => s.abbreviation === 'PF')?.value || 0),
-                        pa: parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || stats.find(s => s.abbreviation === 'PA')?.value || 0)
+                        pa: parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || stats.find(s => s.abbreviation === 'PA')?.value || 0),
+                        streak: streak,
+                        divRecord: divRecord,
+                        confRecord: confRecord,
+                        homeRecord: homeRecord,
+                        roadRecord: roadRecord
                       });
                     });
                   }
@@ -568,11 +701,14 @@
           }
           
           if (standings.length > 0) {
-            // Sort by win percentage
+            // Sort by record (wins first, then losses as tiebreaker)
             standings.sort((a, b) => {
-              const aPct = a.w / (a.w + a.l || 1);
-              const bPct = b.w / (b.w + b.l || 1);
-              return bPct - aPct;
+              // First sort by wins (descending)
+              if (b.w !== a.w) {
+                return b.w - a.w;
+              }
+              // If wins are equal, sort by losses (ascending - fewer losses is better)
+              return a.l - b.l;
             });
             
             liveNflData = standings; // Include all teams (32 NFL teams)
@@ -623,12 +759,139 @@
                     const record = teamDetail.team.record?.items?.[0];
                     
                     if (record && record.stats) {
+                      const stats = record.stats;
+                      
+                      // Get streak - try multiple variations
+                      const streakStat = stats.find(s => 
+                        s.name === 'streak' || 
+                        s.abbreviation === 'STRK' || 
+                        s.name === 'currentStreak' ||
+                        s.displayName?.toLowerCase().includes('streak') ||
+                        s.type === 'streak'
+                      );
+                      const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
+                      
+                      // Get division record - check record.items or stats
+                      let divWins = 0, divLosses = 0;
+                      const divWinsStat = stats.find(s => 
+                        s.name === 'divisionWins' || 
+                        s.abbreviation === 'DIV_W' ||
+                        s.name === 'divWins' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const divLossesStat = stats.find(s => 
+                        s.name === 'divisionLosses' || 
+                        s.abbreviation === 'DIV_L' ||
+                        s.name === 'divLosses' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
+                      divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
+                      
+                      // Check if division record is stored in team.record
+                      if ((divWins === 0 && divLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const divRecord = teamDetail.team.record.items.find(r => r.type === 'division');
+                        if (divRecord && divRecord.stats) {
+                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
+                      
+                      // Get conference record
+                      let confWins = 0, confLosses = 0;
+                      const confWinsStat = stats.find(s => 
+                        s.name === 'conferenceWins' || 
+                        s.abbreviation === 'CONF_W' ||
+                        s.name === 'confWins' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const confLossesStat = stats.find(s => 
+                        s.name === 'conferenceLosses' || 
+                        s.abbreviation === 'CONF_L' ||
+                        s.name === 'confLosses' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
+                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
+                      
+                      // Check if conference record is stored in team.record
+                      if ((confWins === 0 && confLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const confRecord = teamDetail.team.record.items.find(r => r.type === 'conference');
+                        if (confRecord && confRecord.stats) {
+                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
+                      
+                      // Get home record
+                      let homeWins = 0, homeLosses = 0;
+                      const homeWinsStat = stats.find(s => 
+                        s.name === 'homeWins' || 
+                        s.abbreviation === 'HOME_W' ||
+                        s.name === 'homeRecordWins' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const homeLossesStat = stats.find(s => 
+                        s.name === 'homeLosses' || 
+                        s.abbreviation === 'HOME_L' ||
+                        s.name === 'homeRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      homeWins = parseInt(homeWinsStat?.value || homeWinsStat?.displayValue || 0);
+                      homeLosses = parseInt(homeLossesStat?.value || homeLossesStat?.displayValue || 0);
+                      
+                      // Check if home record is stored in team.record
+                      if ((homeWins === 0 && homeLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const homeRecordItem = teamDetail.team.record.items.find(r => r.type === 'home' || r.type === 'homeRecord');
+                        if (homeRecordItem && homeRecordItem.stats) {
+                          homeWins = parseInt(homeRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          homeLosses = parseInt(homeRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const homeRecord = homeWins || homeLosses ? `${homeWins}-${homeLosses}` : '0-0';
+                      
+                      // Get road/away record
+                      let roadWins = 0, roadLosses = 0;
+                      const roadWinsStat = stats.find(s => 
+                        s.name === 'awayWins' || 
+                        s.abbreviation === 'AWAY_W' || 
+                        s.name === 'roadWins' ||
+                        s.name === 'roadRecordWins' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      const roadLossesStat = stats.find(s => 
+                        s.name === 'awayLosses' || 
+                        s.abbreviation === 'AWAY_L' || 
+                        s.name === 'roadLosses' ||
+                        s.name === 'roadRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      roadWins = parseInt(roadWinsStat?.value || roadWinsStat?.displayValue || 0);
+                      roadLosses = parseInt(roadLossesStat?.value || roadLossesStat?.displayValue || 0);
+                      
+                      // Check if away record is stored in team.record
+                      if ((roadWins === 0 && roadLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const awayRecordItem = teamDetail.team.record.items.find(r => r.type === 'away' || r.type === 'road' || r.type === 'awayRecord');
+                        if (awayRecordItem && awayRecordItem.stats) {
+                          roadWins = parseInt(awayRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          roadLosses = parseInt(awayRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const roadRecord = roadWins || roadLosses ? `${roadWins}-${roadLosses}` : '0-0';
+                      
                       return {
                         team: teamObj.team.displayName,
-                        w: parseInt(record.stats.find(s => s.name === 'wins')?.value || 0),
-                        l: parseInt(record.stats.find(s => s.name === 'losses')?.value || 0),
-                        pf: parseInt(record.stats.find(s => s.name === 'pointsFor')?.value || 0),
-                        pa: parseInt(record.stats.find(s => s.name === 'pointsAgainst')?.value || 0)
+                        w: parseInt(stats.find(s => s.name === 'wins')?.value || 0),
+                        l: parseInt(stats.find(s => s.name === 'losses')?.value || 0),
+                        pf: parseInt(stats.find(s => s.name === 'pointsFor')?.value || 0),
+                        pa: parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || 0),
+                        streak: streak,
+                        divRecord: divRecord,
+                        confRecord: confRecord,
+                        homeRecord: homeRecord,
+                        roadRecord: roadRecord
                       };
                     }
                   }
@@ -642,11 +905,14 @@
               standings.push(...results.filter(r => r !== null));
               
               if (standings.length > 0) {
-                // Sort by win percentage
+                // Sort by record (wins first, then losses as tiebreaker)
                 standings.sort((a, b) => {
-                  const aPct = a.w / (a.w + a.l || 1);
-                  const bPct = b.w / (b.w + b.l || 1);
-                  return bPct - aPct;
+                  // First sort by wins (descending)
+                  if (b.w !== a.w) {
+                    return b.w - a.w;
+                  }
+                  // If wins are equal, sort by losses (ascending - fewer losses is better)
+                  return a.l - b.l;
                 });
                 
                 liveNflData = standings;
@@ -689,6 +955,12 @@
                     division.standings.entries.forEach(team => {
                       const stats = team.stats || [];
                       
+                      // Debug: Log all available stats for first team to see structure
+                      if (standings.length === 0) {
+                        console.log('First NBA team stats:', stats);
+                        console.log('NBA team record items:', team.record?.items);
+                      }
+                      
                       // Calculate average points (try to find in stats, otherwise estimate)
                       const gamesPlayed = parseInt(stats.find(s => s.name === 'gamesPlayed')?.value || stats.find(s => s.abbreviation === 'GP')?.value || 0);
                       const pointsFor = parseInt(stats.find(s => s.name === 'pointsFor')?.value || 0);
@@ -697,12 +969,142 @@
                       const avgPts = gamesPlayed > 0 ? Math.round(pointsFor / gamesPlayed) : 105;
                       const avgOpp = gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105;
                       
+                      // Get games behind
+                      const gamesBehind = parseFloat(stats.find(s => s.name === 'gamesBehind' || s.abbreviation === 'GB')?.value || stats.find(s => s.name === 'gamesBack')?.value || 0);
+                      const gb = gamesBehind > 0 ? gamesBehind.toFixed(1) : '0.0';
+                      
+                      // Get streak - try multiple variations
+                      const streakStat = stats.find(s => 
+                        s.name === 'streak' || 
+                        s.abbreviation === 'STRK' || 
+                        s.name === 'currentStreak' ||
+                        s.displayName?.toLowerCase().includes('streak') ||
+                        s.type === 'streak'
+                      );
+                      const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
+                      
+                      // Get division record - check record.items or stats
+                      let divWins = 0, divLosses = 0;
+                      const divWinsStat = stats.find(s => 
+                        s.name === 'divisionWins' || 
+                        s.abbreviation === 'DIV_W' ||
+                        s.name === 'divWins' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const divLossesStat = stats.find(s => 
+                        s.name === 'divisionLosses' || 
+                        s.abbreviation === 'DIV_L' ||
+                        s.name === 'divLosses' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
+                      divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
+                      
+                      // Check if division record is stored in team.record
+                      if ((divWins === 0 && divLosses === 0) && team.record && team.record.items) {
+                        const divRecord = team.record.items.find(r => r.type === 'division');
+                        if (divRecord && divRecord.stats) {
+                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
+                      
+                      // Get conference record
+                      let confWins = 0, confLosses = 0;
+                      const confWinsStat = stats.find(s => 
+                        s.name === 'conferenceWins' || 
+                        s.abbreviation === 'CONF_W' ||
+                        s.name === 'confWins' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const confLossesStat = stats.find(s => 
+                        s.name === 'conferenceLosses' || 
+                        s.abbreviation === 'CONF_L' ||
+                        s.name === 'confLosses' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
+                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
+                      
+                      // Check if conference record is stored in team.record
+                      if ((confWins === 0 && confLosses === 0) && team.record && team.record.items) {
+                        const confRecord = team.record.items.find(r => r.type === 'conference');
+                        if (confRecord && confRecord.stats) {
+                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
+                      
+                      // Get home record
+                      let homeWins = 0, homeLosses = 0;
+                      const homeWinsStat = stats.find(s => 
+                        s.name === 'homeWins' || 
+                        s.abbreviation === 'HOME_W' ||
+                        s.name === 'homeRecordWins' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const homeLossesStat = stats.find(s => 
+                        s.name === 'homeLosses' || 
+                        s.abbreviation === 'HOME_L' ||
+                        s.name === 'homeRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      homeWins = parseInt(homeWinsStat?.value || homeWinsStat?.displayValue || 0);
+                      homeLosses = parseInt(homeLossesStat?.value || homeLossesStat?.displayValue || 0);
+                      
+                      // Check if home record is stored in team.record
+                      if ((homeWins === 0 && homeLosses === 0) && team.record && team.record.items) {
+                        const homeRecordItem = team.record.items.find(r => r.type === 'home' || r.type === 'homeRecord');
+                        if (homeRecordItem && homeRecordItem.stats) {
+                          homeWins = parseInt(homeRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          homeLosses = parseInt(homeRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const homeRecord = homeWins || homeLosses ? `${homeWins}-${homeLosses}` : '0-0';
+                      
+                      // Get road/away record
+                      let roadWins = 0, roadLosses = 0;
+                      const roadWinsStat = stats.find(s => 
+                        s.name === 'awayWins' || 
+                        s.abbreviation === 'AWAY_W' || 
+                        s.name === 'roadWins' ||
+                        s.name === 'roadRecordWins' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      const roadLossesStat = stats.find(s => 
+                        s.name === 'awayLosses' || 
+                        s.abbreviation === 'AWAY_L' || 
+                        s.name === 'roadLosses' ||
+                        s.name === 'roadRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      roadWins = parseInt(roadWinsStat?.value || roadWinsStat?.displayValue || 0);
+                      roadLosses = parseInt(roadLossesStat?.value || roadLossesStat?.displayValue || 0);
+                      
+                      // Check if away record is stored in team.record
+                      if ((roadWins === 0 && roadLosses === 0) && team.record && team.record.items) {
+                        const awayRecordItem = team.record.items.find(r => r.type === 'away' || r.type === 'road' || r.type === 'awayRecord');
+                        if (awayRecordItem && awayRecordItem.stats) {
+                          roadWins = parseInt(awayRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          roadLosses = parseInt(awayRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const roadRecord = roadWins || roadLosses ? `${roadWins}-${roadLosses}` : '0-0';
+                      
                       standings.push({
                         team: team.team.displayName,
                         w: parseInt(stats.find(s => s.name === 'wins')?.value || stats.find(s => s.abbreviation === 'W')?.value || 0),
                         l: parseInt(stats.find(s => s.name === 'losses')?.value || stats.find(s => s.abbreviation === 'L')?.value || 0),
+                        gb: gb,
                         pts: avgPts,
-                        opp: avgOpp
+                        opp: avgOpp,
+                        streak: streak,
+                        divRecord: divRecord,
+                        confRecord: confRecord,
+                        homeRecord: homeRecord,
+                        roadRecord: roadRecord
                       });
                     });
                   }
@@ -712,11 +1114,14 @@
           }
           
           if (standings.length > 0) {
-            // Sort by win percentage
+            // Sort by record (wins first, then losses as tiebreaker)
             standings.sort((a, b) => {
-              const aPct = a.w / (a.w + a.l || 1);
-              const bPct = b.w / (b.w + b.l || 1);
-              return bPct - aPct;
+              // First sort by wins (descending)
+              if (b.w !== a.w) {
+                return b.w - a.w;
+              }
+              // If wins are equal, sort by losses (ascending - fewer losses is better)
+              return a.l - b.l;
             });
             
             liveNbaData = standings; // Include all teams (30 NBA teams)
@@ -767,16 +1172,147 @@
                     const record = teamDetail.team.record?.items?.[0];
                     
                     if (record && record.stats) {
-                      const gamesPlayed = parseInt(record.stats.find(s => s.name === 'gamesPlayed')?.value || 0);
-                      const pointsFor = parseInt(record.stats.find(s => s.name === 'pointsFor')?.value || 0);
-                      const pointsAgainst = parseInt(record.stats.find(s => s.name === 'pointsAgainst')?.value || 0);
+                      const stats = record.stats;
+                      const gamesPlayed = parseInt(stats.find(s => s.name === 'gamesPlayed')?.value || 0);
+                      const pointsFor = parseInt(stats.find(s => s.name === 'pointsFor')?.value || 0);
+                      const pointsAgainst = parseInt(stats.find(s => s.name === 'pointsAgainst')?.value || 0);
+                      
+                      // Get games behind
+                      const gamesBehind = parseFloat(stats.find(s => s.name === 'gamesBehind' || s.abbreviation === 'GB')?.value || stats.find(s => s.name === 'gamesBack')?.value || 0);
+                      const gb = gamesBehind > 0 ? gamesBehind.toFixed(1) : '0.0';
+                      
+                      // Get streak - try multiple variations
+                      const streakStat = stats.find(s => 
+                        s.name === 'streak' || 
+                        s.abbreviation === 'STRK' || 
+                        s.name === 'currentStreak' ||
+                        s.displayName?.toLowerCase().includes('streak') ||
+                        s.type === 'streak'
+                      );
+                      const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
+                      
+                      // Get division record - check record.items or stats
+                      let divWins = 0, divLosses = 0;
+                      const divWinsStat = stats.find(s => 
+                        s.name === 'divisionWins' || 
+                        s.abbreviation === 'DIV_W' ||
+                        s.name === 'divWins' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const divLossesStat = stats.find(s => 
+                        s.name === 'divisionLosses' || 
+                        s.abbreviation === 'DIV_L' ||
+                        s.name === 'divLosses' ||
+                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
+                      divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
+                      
+                      // Check if division record is stored in team.record
+                      if ((divWins === 0 && divLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const divRecord = teamDetail.team.record.items.find(r => r.type === 'division');
+                        if (divRecord && divRecord.stats) {
+                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
+                      
+                      // Get conference record
+                      let confWins = 0, confLosses = 0;
+                      const confWinsStat = stats.find(s => 
+                        s.name === 'conferenceWins' || 
+                        s.abbreviation === 'CONF_W' ||
+                        s.name === 'confWins' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const confLossesStat = stats.find(s => 
+                        s.name === 'conferenceLosses' || 
+                        s.abbreviation === 'CONF_L' ||
+                        s.name === 'confLosses' ||
+                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
+                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
+                      
+                      // Check if conference record is stored in team.record
+                      if ((confWins === 0 && confLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const confRecord = teamDetail.team.record.items.find(r => r.type === 'conference');
+                        if (confRecord && confRecord.stats) {
+                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
+                      
+                      // Get home record
+                      let homeWins = 0, homeLosses = 0;
+                      const homeWinsStat = stats.find(s => 
+                        s.name === 'homeWins' || 
+                        s.abbreviation === 'HOME_W' ||
+                        s.name === 'homeRecordWins' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('win')
+                      );
+                      const homeLossesStat = stats.find(s => 
+                        s.name === 'homeLosses' || 
+                        s.abbreviation === 'HOME_L' ||
+                        s.name === 'homeRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('home') && s.displayName?.toLowerCase().includes('loss')
+                      );
+                      homeWins = parseInt(homeWinsStat?.value || homeWinsStat?.displayValue || 0);
+                      homeLosses = parseInt(homeLossesStat?.value || homeLossesStat?.displayValue || 0);
+                      
+                      // Check if home record is stored in team.record
+                      if ((homeWins === 0 && homeLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const homeRecordItem = teamDetail.team.record.items.find(r => r.type === 'home' || r.type === 'homeRecord');
+                        if (homeRecordItem && homeRecordItem.stats) {
+                          homeWins = parseInt(homeRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          homeLosses = parseInt(homeRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const homeRecord = homeWins || homeLosses ? `${homeWins}-${homeLosses}` : '0-0';
+                      
+                      // Get road/away record
+                      let roadWins = 0, roadLosses = 0;
+                      const roadWinsStat = stats.find(s => 
+                        s.name === 'awayWins' || 
+                        s.abbreviation === 'AWAY_W' || 
+                        s.name === 'roadWins' ||
+                        s.name === 'roadRecordWins' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      const roadLossesStat = stats.find(s => 
+                        s.name === 'awayLosses' || 
+                        s.abbreviation === 'AWAY_L' || 
+                        s.name === 'roadLosses' ||
+                        s.name === 'roadRecordLosses' ||
+                        s.displayName?.toLowerCase().includes('away') || s.displayName?.toLowerCase().includes('road')
+                      );
+                      roadWins = parseInt(roadWinsStat?.value || roadWinsStat?.displayValue || 0);
+                      roadLosses = parseInt(roadLossesStat?.value || roadLossesStat?.displayValue || 0);
+                      
+                      // Check if away record is stored in team.record
+                      if ((roadWins === 0 && roadLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
+                        const awayRecordItem = teamDetail.team.record.items.find(r => r.type === 'away' || r.type === 'road' || r.type === 'awayRecord');
+                        if (awayRecordItem && awayRecordItem.stats) {
+                          roadWins = parseInt(awayRecordItem.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
+                          roadLosses = parseInt(awayRecordItem.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        }
+                      }
+                      const roadRecord = roadWins || roadLosses ? `${roadWins}-${roadLosses}` : '0-0';
                       
                       return {
                         team: teamObj.team.displayName,
-                        w: parseInt(record.stats.find(s => s.name === 'wins')?.value || 0),
-                        l: parseInt(record.stats.find(s => s.name === 'losses')?.value || 0),
+                        w: parseInt(stats.find(s => s.name === 'wins')?.value || 0),
+                        l: parseInt(stats.find(s => s.name === 'losses')?.value || 0),
+                        gb: gb,
                         pts: gamesPlayed > 0 ? Math.round(pointsFor / gamesPlayed) : 105,
-                        opp: gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105
+                        opp: gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105,
+                        streak: streak,
+                        divRecord: divRecord,
+                        confRecord: confRecord,
+                        homeRecord: homeRecord,
+                        roadRecord: roadRecord
                       };
                     }
                   }
@@ -790,11 +1326,14 @@
               standings.push(...results.filter(r => r !== null));
               
               if (standings.length > 0) {
-                // Sort by win percentage
+                // Sort by record (wins first, then losses as tiebreaker)
                 standings.sort((a, b) => {
-                  const aPct = a.w / (a.w + a.l || 1);
-                  const bPct = b.w / (b.w + b.l || 1);
-                  return bPct - aPct;
+                  // First sort by wins (descending)
+                  if (b.w !== a.w) {
+                    return b.w - a.w;
+                  }
+                  // If wins are equal, sort by losses (ascending - fewer losses is better)
+                  return a.l - b.l;
                 });
                 
                 liveNbaData = standings;
@@ -810,12 +1349,57 @@
       return null;
     }
 
+    // Helper function to log all available stats from ESPN API (for debugging)
+    async function logAvailableStats() {
+      try {
+        // Fetch NFL data and log all available stats
+        const nflResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (nflResponse.ok) {
+          const nflData = await nflResponse.json();
+          if (nflData.children && nflData.children.length > 0) {
+            const firstTeam = nflData.children[0]?.children?.[0]?.standings?.entries?.[0];
+            if (firstTeam && firstTeam.stats) {
+              console.log('=== AVAILABLE NFL STATS ===');
+              firstTeam.stats.forEach(stat => {
+                console.log(`Name: ${stat.name || 'N/A'}, Abbreviation: ${stat.abbreviation || 'N/A'}, Value: ${stat.value || stat.displayValue || 'N/A'}, Description: ${stat.description || 'N/A'}`);
+              });
+            }
+          }
+        }
+        
+        // Fetch NBA data and log all available stats
+        const nbaResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (nbaResponse.ok) {
+          const nbaData = await nbaResponse.json();
+          if (nbaData.children && nbaData.children.length > 0) {
+            const firstTeam = nbaData.children[0]?.children?.[0]?.standings?.entries?.[0];
+            if (firstTeam && firstTeam.stats) {
+              console.log('=== AVAILABLE NBA STATS ===');
+              firstTeam.stats.forEach(stat => {
+                console.log(`Name: ${stat.name || 'N/A'}, Abbreviation: ${stat.abbreviation || 'N/A'}, Value: ${stat.value || stat.displayValue || 'N/A'}, Description: ${stat.description || 'N/A'}`);
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.log('Error logging available stats:', error);
+      }
+    }
+    
+    // Uncomment the line below and refresh the page to see all available stats in console
+    // Temporarily enabled to debug stat names
+    // logAvailableStats();
+
     async function populateSports(){
       // NFL Section
       const nflBody = document.getElementById('nflBody');
       const nflSubtitle = document.getElementById('nflSubtitle');
       
-      nflBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading NFL data...</td></tr>';
+      nflBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Loading NFL data...</td></tr>';
       nflSubtitle.innerHTML = '<span style="color:#6c757d">Fetching live standings...</span>';
       
       const nflData = await fetchLiveNflData();
@@ -827,7 +1411,7 @@
           // Add data attribute for search filtering
           tr.setAttribute('data-team', r.team.toLowerCase());
           tr.style.cursor = 'default';
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nflBody.appendChild(tr);
         });
         
@@ -839,7 +1423,7 @@
         nflSample.forEach((r, index) => {
           const tr = document.createElement('tr');
           tr.setAttribute('data-team', r.team.toLowerCase());
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nflBody.appendChild(tr);
         });
         
@@ -850,7 +1434,7 @@
       const nbaBody = document.getElementById('nbaBody');
       const nbaSubtitle = document.getElementById('nbaSubtitle');
       
-      nbaBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading NBA data...</td></tr>';
+      nbaBody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Loading NBA data...</td></tr>';
       nbaSubtitle.innerHTML = '<span style="color:#6c757d">Fetching live standings...</span>';
       
       const nbaData = await fetchLiveNbaData();
@@ -862,7 +1446,7 @@
           // Add data attribute for search filtering
           tr.setAttribute('data-team', r.team.toLowerCase());
           tr.style.cursor = 'default';
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td><td>${r.opp}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nbaBody.appendChild(tr);
         });
         
@@ -874,7 +1458,7 @@
         nbaSample.forEach((r, index) => {
           const tr = document.createElement('tr');
           tr.setAttribute('data-team', r.team.toLowerCase());
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pts}</td><td>${r.opp}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nbaBody.appendChild(tr);
         });
         
@@ -1705,6 +2289,9 @@
 
     // initial render
     refreshAll();
+    
+    // Auto-refresh standings every 5 minutes to keep stats current
+    setInterval(populateSports, 300000);
     
 
   </script>
