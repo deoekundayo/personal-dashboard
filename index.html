@@ -117,28 +117,28 @@
 
       <!-- Score Ticker Row -->
       <div class="col-12">
-        <div id="scoreTickerSection" class="chart-card" style="position:relative;min-height:200px;">
+        <div id="scoreTickerSection" class="chart-card" style="position:relative;min-height:220px;padding:12px 16px;">
           <!-- Score Display Section -->
-          <div style="text-align:center;margin-bottom:20px;">
-            <div style="display:flex;justify-content:center;margin-bottom:8px;">
+          <div style="text-align:center;max-width:1200px;margin:0 auto;">
+            <div style="display:flex;justify-content:center;margin-bottom:16px;">
               <div class="league-segmented-control">
                 <button id="nflButton" class="league-button active" data-league="NFL">NFL</button>
                 <button id="nbaButton" class="league-button" data-league="NBA">NBA</button>
               </div>
             </div>
            
-            <div id="liveTicker" style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">Loading scores...</div>
-            <div id="tickerSubtitle" style="font-size:0.85rem;color:#6c757d;">Loading...</div>
+            <div id="liveTicker" style="font-size:1.6rem;font-weight:700;margin-bottom:6px;line-height:1.2;min-height:48px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;">Loading scores...</div>
+            <div id="tickerSubtitle" style="font-size:1rem;color:#6c757d;min-height:18px;">Loading...</div>
           </div>
           
           <!-- Player Stats Section (Hidden by default, shown only when game is over) -->
-          <div id="playerStatsSection" style="border-top:1px solid #e9ecef;padding-top:16px;display:none;">
+          <div id="playerStatsSection" style="border-top:1px solid #e9ecef;padding-top:12px;display:none;max-width:1200px;margin:0 auto;">
             <div style="text-align:center;">
-              <div style="font-size:0.9rem;margin-bottom:8px;color:#6c757d;">Player Stats</div>
+              <div style="font-size:0.95rem;margin-bottom:6px;color:#6c757d;font-weight:600;">Player Stats</div>
               <div id="playerStatsDisplay" style="font-size:0.85rem;line-height:1.4;min-height:40px;">
-                <div style="color:#6c757d;font-style:italic;text-align:center;padding:10px;">Loading player stats...</div>
+                <div style="color:#6c757d;font-style:italic;text-align:center;padding:8px;">Loading player stats...</div>
               </div>
-              <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:4px;"></div>
+              <div id="playerStatsSubtitle" style="font-size:0.75rem;color:#6c757d;margin-top:6px;"></div>
             </div>
           </div>
         </div>
@@ -1729,7 +1729,20 @@
                       text: gameText,
                       isLive: isCurrentlyInProgress,
                       isFuture: isFuture,
-                      gameId: event.id
+                      gameId: event.id,
+                      homeTeam: {
+                        name: homeTeam.team.displayName,
+                        abbreviation: homeTeam.team.abbreviation,
+                        logo: homeTeam.team.logo
+                      },
+                      awayTeam: {
+                        name: awayTeam.team.displayName,
+                        abbreviation: awayTeam.team.abbreviation,
+                        logo: awayTeam.team.logo
+                      },
+                      homeScore: homeScore,
+                      awayScore: awayScore,
+                      status: status
                     });
                     
                     console.log(`Added: ${gameText}, isLive: ${isCurrentlyInProgress}, isFuture: ${isFuture}`);
@@ -1814,7 +1827,20 @@
                       text: gameText,
                       isLive: isCurrentlyInProgress,
                       isFuture: isFuture,
-                      gameId: event.id
+                      gameId: event.id,
+                      homeTeam: {
+                        name: homeTeam.team.displayName,
+                        abbreviation: homeTeam.team.abbreviation,
+                        logo: homeTeam.team.logo
+                      },
+                      awayTeam: {
+                        name: awayTeam.team.displayName,
+                        abbreviation: awayTeam.team.abbreviation,
+                        logo: awayTeam.team.logo
+                      },
+                      homeScore: homeScore,
+                      awayScore: awayScore,
+                      status: status
                     });
                     
                     console.log(`Added: ${gameText}, isLive: ${isCurrentlyInProgress}, isFuture: ${isFuture}`);
@@ -2129,30 +2155,156 @@
         ? filteredScores[0] 
         : filteredScores[tickerIndex % filteredScores.length];
       
-      // Format with league prefix (only if showing all leagues)
+      // Check if we have team logo data
+      if (currentScore.homeTeam && currentScore.awayTeam) {
+        // Render with logos
+        const awayLogo = currentScore.awayTeam.logo || '';
+        const homeLogo = currentScore.homeTeam.logo || '';
+        const awayName = currentScore.awayTeam.abbreviation;
+        const homeName = currentScore.homeTeam.abbreviation;
+        const awayScore = currentScore.awayScore || '0';
+        const homeScore = currentScore.homeScore || '0';
+        const status = currentScore.status || '';
+        
+        // Team color mapping with primary and secondary colors
+        const nflColors = {
+          // NFL Teams
+          'ARI': { primary: '#97233F', secondary: '#FFC72C' },
+          'ATL': { primary: '#A71930', secondary: '#000000' },
+          'BAL': { primary: '#241773', secondary: '#000000' },
+          'BUF': { primary: '#00338D', secondary: '#C8102E' },
+          'CAR': { primary: '#0085CA', secondary: '#101820' },
+          'CHI': { primary: '#C83803', secondary: '#0B162A' },
+          'CIN': { primary: '#FB4F14', secondary: '#000000' },
+          'CLE': { primary: '#311D00', secondary: '#FF3C00' },
+          'DAL': { primary: '#003594', secondary: '#869397' },
+          'DEN': { primary: '#FB4F14', secondary: '#002244' },
+          'DET': { primary: '#0076B6', secondary: '#B0B7BC' },
+          'GB': { primary: '#203731', secondary: '#FFB612' },
+          'HOU': { primary: '#03202F', secondary: '#A71930' },
+          'IND': { primary: '#002C5F', secondary: '#FFFFFF' },
+          'JAX': { primary: '#006778', secondary: '#9F792C' },
+          'KC': { primary: '#E31837', secondary: '#FFB612' },
+          'LV': { primary: '#000000', secondary: '#A5ACAF' },
+          'LAC': { primary: '#0080C6', secondary: '#FFC20E' },
+          'LAR': { primary: '#003594', secondary: '#FFA300' },
+          'MIA': { primary: '#008E97', secondary: '#FC4C02' },
+          'MIN': { primary: '#4F2683', secondary: '#FFC62F' },
+          'NE': { primary: '#002244', secondary: '#C60C30' },
+          'NO': { primary: '#D3BC8D', secondary: '#000000' },
+          'NYG': { primary: '#0B2265', secondary: '#A71930' },
+          'NYJ': { primary: '#125740', secondary: '#FFFFFF' },
+          'PHI': { primary: '#004C54', secondary: '#A5ACAF' },
+          'PIT': { primary: '#FFB612', secondary: '#000000' },
+          'SF': { primary: '#AA0000', secondary: '#B3995D' },
+          'SEA': { primary: '#002244', secondary: '#69BE28' },
+          'TB': { primary: '#D50A0A', secondary: '#FF7900' },
+          'TEN': { primary: '#0C2340', secondary: '#4B92DB' },
+          'WAS': { primary: '#5A1414', secondary: '#FFB612' }
+        };
+        
+        const nbaColors = {
+          // NBA Teams
+          'ATL': { primary: '#E03A3E', secondary: '#C1D32F' },
+          'BOS': { primary: '#007A33', secondary: '#BA9653' },
+          'BKN': { primary: '#000000', secondary: '#FFFFFF' },
+          'CHA': { primary: '#1D1160', secondary: '#00788C' },
+          'CHI': { primary: '#CE1141', secondary: '#000000' },
+          'CLE': { primary: '#860038', secondary: '#FDBB30' },
+          'DAL': { primary: '#00538C', secondary: '#002B5E' },
+          'DEN': { primary: '#0E2240', secondary: '#FEC524' },
+          'DET': { primary: '#C8102E', secondary: '#1D42BA' },
+          'GSW': { primary: '#1D428A', secondary: '#FFC72C' },
+          'HOU': { primary: '#CE1141', secondary: '#000000' },
+          'LAC': { primary: '#C8102E', secondary: '#1D428A' },
+          'LAL': { primary: '#552583', secondary: '#FDB927' },
+          'MEM': { primary: '#5D76A9', secondary: '#12173F' },
+          'MIA': { primary: '#98002E', secondary: '#F9A01B' },
+          'MIL': { primary: '#00471B', secondary: '#EEE1C6' },
+          'MIN': { primary: '#0C2340', secondary: '#236192' },
+          'NOP': { primary: '#0C2340', secondary: '#C8102E' },
+          'NY': { primary: '#006BB6', secondary: '#F58426' },
+          'OKC': { primary: '#007AC1', secondary: '#EF3B24' },
+          'ORL': { primary: '#0077C0', secondary: '#C4CED4' },
+          'PHI': { primary: '#006BB6', secondary: '#ED174C' },
+          'PHX': { primary: '#1D1160', secondary: '#E56020' },
+          'POR': { primary: '#E03A3E', secondary: '#000000' },
+          'SAC': { primary: '#5A2D81', secondary: '#63727A' },
+          'SA': { primary: '#C4CED4', secondary: '#000000' },
+          'TOR': { primary: '#CE1141', secondary: '#000000' },
+          'UTA': { primary: '#002B5C', secondary: '#F9A01B' },
+          'WSH': { primary: '#002B5C', secondary: '#E31837' }
+        };
+        
+        // Select the correct color set based on league
+        const currentLeague = currentScore.league;
+        const teamColorsSet = currentLeague === 'NFL' ? nflColors : nbaColors;
+        
+        const awayTeamColors = teamColorsSet[awayName] || { primary: '#2c3e50', secondary: '#ffffff' };
+        const homeTeamColors = teamColorsSet[homeName] || { primary: '#2c3e50', secondary: '#ffffff' };
+        
+        // Create gradient using both primary and secondary colors
+        const awayGradient = `linear-gradient(135deg, ${awayTeamColors.primary}, ${awayTeamColors.secondary})`;
+        const homeGradient = `linear-gradient(135deg, ${homeTeamColors.primary}, ${homeTeamColors.secondary})`;
+        
+        tickerElement.innerHTML = `
+          <div style="display:flex;align-items:stretch;width:100%;margin:0;border-radius:10px;overflow:hidden;">
+            <!-- Left Half (Away Team) -->
+            <div style="flex:1;background:${awayGradient};padding:12px 16px;display:flex;align-items:center;justify-content:space-between;min-height:140px;">
+              <div style="flex-shrink:0;width:130px;display:flex;justify-content:flex-start;">
+                ${awayLogo ? `<img src="${awayLogo}" alt="${awayName}" style="width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.15));">` : ''}
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;color:white;">
+                <span style="font-size:1.4rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.25);">${awayName}</span>
+                <span style="font-size:2.2rem;font-weight:800;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.25);">${awayScore}</span>
+              </div>
+            </div>
+            
+            <!-- Center Status -->
+            <div style="background:white;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:center;">
+              <span style="font-size:1.4rem;font-weight:700;color:#6c757d;">@</span>
+              <span style="font-size:0.95rem;font-weight:600;color:#6c757d;white-space:nowrap;">${status}</span>
+            </div>
+            
+            <!-- Right Half (Home Team) -->
+            <div style="flex:1;background:${homeGradient};padding:12px 16px;display:flex;align-items:center;justify-content:space-between;min-height:140px;">
+              <div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;color:white;">
+                <span style="font-size:1.4rem;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,0.25);">${homeName}</span>
+                <span style="font-size:2.2rem;font-weight:800;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.25);">${homeScore}</span>
+              </div>
+              <div style="flex-shrink:0;width:130px;display:flex;justify-content:flex-end;">
+                ${homeLogo ? `<img src="${homeLogo}" alt="${homeName}" style="width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.15));">` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Fallback to text display if no team data
       const displayText = selectedLeague === 'all'
         ? (currentScore.text.startsWith('Sample:') ? currentScore.text : `${currentScore.league}: ${currentScore.text}`)
         : currentScore.text;
       
       tickerElement.textContent = displayText;
+      }
       
       // Update subtitle and color based on data source
-      if (currentScore.text.startsWith('Sample:')) {
+      if (currentScore.text && currentScore.text.startsWith('Sample:')) {
+        if (!currentScore.homeTeam || !currentScore.awayTeam) {
         tickerElement.style.color = '#6c757d';
+        }
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#dc3545">Sample data (API unavailable)</span>';
       } else if (currentScore.isLive) {
-        // Show live indicator for all live games
-        tickerElement.style.color = '#198754'; // Green for live games
+        // Green for live games
         if (selectedLeague === 'NFL' && filteredScores.length === 1) {
           if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🟢 Live Game — Monday Night Football</span>';
         } else {
           if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#198754">🟢 Live Game</span>';
         }
       } else if (currentScore.isFuture) {
-        tickerElement.style.color = '#4da6ff'; // Light blue for future games
+        // Light blue for future games
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#4da6ff">🔵 Future Game</span>';
       } else {
-        tickerElement.style.color = '#6c757d'; // Gray for completed games
+        // Gray for completed games
         if (tickerSubtitle) tickerSubtitle.innerHTML = '<span style="color:#6c757d">⚪️ Completed Game</span>';
       }
       
