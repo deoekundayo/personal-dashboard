@@ -120,14 +120,27 @@ To change the weather location from Charlotte, NC:
 
 ## 🔧 Technical Details
 
-### Dependencies
-- **Express.js**: Backend server for API endpoints
-- **Node.js**: Runtime environment
+### Technologies & Frameworks
+
+#### Backend Frameworks
+- **Express.js** (v4.18.2): Web application framework for API endpoints
+- **Node.js**: JavaScript runtime environment
+
+#### HTTP & API Clients
+- **node-fetch** (v2.7.0): HTTP client for making API calls
+
+#### Middleware & Utilities
+- **CORS** (v2.8.5): Cross-origin resource sharing middleware
+
+#### Development Tools
+- **Nodemon** (v3.0.1): Auto-restart development server for faster development
+
+#### Frontend Technologies
 - **Bootstrap 5.3.2**: CSS framework for responsive layout
 - **Chart.js 4.4.0**: Interactive charting library
-- **Vanilla JavaScript**: Frontend functionality
-- **CORS**: Cross-origin resource sharing
-- **node-fetch**: HTTP client for API calls
+- **Vanilla JavaScript**: Frontend functionality (ES6+)
+- **HTML5**: Semantic markup
+- **CSS3**: Modern styling with custom properties
 
 ### Browser Compatibility
 - Chrome 80+
