@@ -32,7 +32,7 @@
          background:transparent;
          padding:6px 12px;
          font-size:0.75rem;
-         font-weight:500;
+         font-weight:500;                         
          cursor:pointer;
          transition:all 0.2s ease;
          color:#6c757d;
@@ -151,15 +151,44 @@
             <div id="nflSnapshotCard" class="chart-card" style="height:540px">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="section-title">NFL Snapshot</div>
+                <div>
+                  <button id="nflViewToggle" class="btn btn-sm btn-outline-primary me-2">Conference View</button>
                 <button id="refreshNFL" class="btn btn-sm btn-outline-primary">Refresh</button>
+                </div>
               </div>
               <div id="nflSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NFL standings from ESPN API</div>
+              
+              <!-- Standard View -->
+              <div id="nflStandardView">
               <input id="nflSearch" class="form-control form-control-sm mb-2" placeholder="Search NFL teams..." style="font-size:0.85rem">
               <div style="overflow:auto;max-height:420px">
                 <table class="table table-sm" style="font-size:0.8rem;">
                   <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Streak</th><th>Div</th><th>Conf</th><th>Home</th><th>Road</th></tr></thead>
                   <tbody id="nflBody"></tbody>
                 </table>
+                </div>
+              </div>
+              
+              <!-- Conference View -->
+              <div id="nflConferenceView" style="display:none;">
+                <div style="display:flex;gap:20px;height:460px;overflow:hidden;">
+                  <!-- AFC Section -->
+                  <div style="flex:1;overflow:auto;">
+                    <div style="font-size:1rem;font-weight:700;color:#C8102E;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #C8102E;">AFC</div>
+                    <table class="table table-sm" style="font-size:0.75rem;">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>Div</th></tr></thead>
+                      <tbody id="afcBody"></tbody>
+                    </table>
+                  </div>
+                  <!-- NFC Section -->
+                  <div style="flex:1;overflow:auto;">
+                    <div style="font-size:1rem;font-weight:700;color:#1D428A;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1D428A;">NFC</div>
+                    <table class="table table-sm" style="font-size:0.75rem;">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>Div</th></tr></thead>
+                      <tbody id="nfcBody"></tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -168,19 +197,49 @@
             <div class="chart-card" style="height:540px">
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="section-title">NBA Snapshot</div>
+                <div>
+                  <button id="nbaViewToggle" class="btn btn-sm btn-outline-primary me-2">Conference View</button>
                 <button id="refreshNBA" class="btn btn-sm btn-outline-primary">Refresh</button>
+                </div>
               </div>
               <div id="nbaSubtitle" style="font-size:0.85rem;color:#6c757d;margin-bottom:8px">Live NBA standings from ESPN API</div>
+              
+              <!-- Standard View -->
+              <div id="nbaStandardView">
               <input id="nbaSearch" class="form-control form-control-sm mb-2" placeholder="Search NBA teams..." style="font-size:0.85rem">
               <div style="overflow:auto;max-height:420px">
                 <table class="table table-sm" style="font-size:0.8rem;">
-                  <thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>PTS</th><th>OPP</th><th>Streak</th><th>Div</th><th>Conf</th><th>Home</th><th>Road</th></tr></thead>
+                    <thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>PTS</th><th>OPP</th><th>Streak</th><th>Home</th><th>Road</th></tr></thead>
                   <tbody id="nbaBody"></tbody>
                 </table>
               </div>
             </div>
+              
+              <!-- Conference View -->
+              <div id="nbaConferenceView" style="display:none;">
+                <div style="display:flex;gap:20px;height:460px;overflow:hidden;">
+                  <!-- Eastern Conference Section -->
+                  <div style="flex:1;overflow:auto;">
+                    <div style="font-size:1rem;font-weight:700;color:#C8102E;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #C8102E;">Eastern</div>
+                    <table class="table table-sm" style="font-size:0.75rem;">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>Div</th></tr></thead>
+                      <tbody id="easternBody"></tbody>
+                    </table>
+                  </div>
+                  <!-- Western Conference Section -->
+                  <div style="flex:1;overflow:auto;">
+                    <div style="font-size:1rem;font-weight:700;color:#1D428A;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #1D428A;">Western</div>
+                    <table class="table table-sm" style="font-size:0.75rem;">
+                      <thead><tr><th>Team</th><th>W</th><th>L</th><th>GB</th><th>Div</th></tr></thead>
+                      <tbody id="westernBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
           </div>
         </div>
+        </div>
+        
       </div>
 
       <!-- Team Search Results Row -->
@@ -514,10 +573,10 @@
 
     // Sample fallback data
     const nflSample = [
-      {team:'Eagles',w:6,l:1,pf:198,pa:140,streak:'W3',divRecord:'2-0',confRecord:'4-1',homeRecord:'4-0',roadRecord:'2-1'},
-      {team:'Bengals',w:5,l:2,pf:172,pa:150,streak:'W2',divRecord:'2-1',confRecord:'4-2',homeRecord:'3-1',roadRecord:'2-1'},
-      {team:'Bills',w:5,l:2,pf:180,pa:148,streak:'L1',divRecord:'1-1',confRecord:'4-1',homeRecord:'2-1',roadRecord:'3-1'},
-      {team:'49ers',w:5,l:2,pf:165,pa:138,streak:'W1',divRecord:'1-1',confRecord:'3-2',homeRecord:'3-1',roadRecord:'2-1'}
+      {team:'Eagles',conference:'NFC',w:6,l:1,pf:198,pa:140,streak:'W3',divRecord:'2-0',confRecord:'4-1',homeRecord:'4-0',roadRecord:'2-1'},
+      {team:'Bengals',conference:'AFC',w:5,l:2,pf:172,pa:150,streak:'W2',divRecord:'2-1',confRecord:'4-2',homeRecord:'3-1',roadRecord:'2-1'},
+      {team:'Bills',conference:'AFC',w:5,l:2,pf:180,pa:148,streak:'L1',divRecord:'1-1',confRecord:'4-1',homeRecord:'2-1',roadRecord:'3-1'},
+      {team:'49ers',conference:'NFC',w:5,l:2,pf:165,pa:138,streak:'W1',divRecord:'1-1',confRecord:'3-2',homeRecord:'3-1',roadRecord:'2-1'}
     ];
 
     const nbaSample = [
@@ -526,6 +585,51 @@
       {team:'Celtics',w:7,l:3,gb:'1.0',pts:111,opp:107,streak:'L1',divRecord:'2-1',confRecord:'5-2',homeRecord:'4-1',roadRecord:'3-2'},
       {team:'Nuggets',w:6,l:4,gb:'2.0',pts:108,opp:105,streak:'W2',divRecord:'1-1',confRecord:'4-3',homeRecord:'3-2',roadRecord:'3-2'}
     ];
+
+    // Helper function to determine conference from team name
+    function getNFLConference(teamName) {
+      // Handle both full names (e.g., "Denver Broncos") and short names (e.g., "Broncos")
+      const teamNameUpper = String(teamName).toUpperCase();
+      
+      const afcTeamKeywords = [
+        'BILLS', 'DOLPHINS', 'PATRIOTS', 'JETS', // AFC East
+        'RAVENS', 'BENGALS', 'BROWNS', 'STEELERS', // AFC North
+        'TEXANS', 'COLTS', 'JAGUARS', 'TITANS', // AFC South
+        'BRONCOS', 'CHIEFS', 'RAIDERS', 'CHARGERS' // AFC West
+      ];
+      
+      // Check if any AFC team keyword appears in the team name
+      for (const keyword of afcTeamKeywords) {
+        if (teamNameUpper.includes(keyword)) {
+          return 'AFC';
+        }
+      }
+      
+      // If no AFC keyword found, it's NFC
+      return 'NFC';
+    }
+
+    // Helper function to determine NBA conference from team name
+    function getNBAConference(teamName) {
+      // Handle both full names (e.g., "Los Angeles Lakers") and short names (e.g., "Lakers")
+      const teamNameUpper = String(teamName).toUpperCase();
+      
+      const easternTeamKeywords = [
+        'CELTICS', 'NETS', 'KNICKS', '76ERS', 'RAPTORS', // Atlantic
+        'BULLS', 'CAVALIERS', 'PISTONS', 'PACERS', 'BUCKS', // Central
+        'HAWKS', 'HORNETS', 'HEAT', 'MAGIC', 'WIZARDS' // Southeast
+      ];
+      
+      // Check if any Eastern team keyword appears in the team name
+      for (const keyword of easternTeamKeywords) {
+        if (teamNameUpper.includes(keyword)) {
+          return 'Eastern';
+        }
+      }
+      
+      // If no Eastern keyword found, it's Western
+      return 'Western';
+    }
 
     // Fetch live NFL data from ESPN API
     async function fetchLiveNflData() {
@@ -556,9 +660,36 @@
                       
                       // Debug: Log all available stats for first team to see structure
                       if (standings.length === 0) {
-                        console.log('First team stats:', stats);
+                        console.log('=== NFL API DATA STRUCTURE DEBUG ===');
+                        console.log('Team:', team.team.displayName);
+                        console.log('All stats:', stats);
+                        console.log('Stats array length:', stats.length);
+                        console.log('Team record:', team.record);
                         console.log('Team record items:', team.record?.items);
-                        console.log('Full team object keys:', Object.keys(team));
+                        if (team.record && team.record.items) {
+                          console.log('Record items types:', team.record.items.map(r => r.type || r.name));
+                          // Debug conference record specifically
+                          const confRecordItem = team.record.items.find(r => 
+                            r.type === 'conference' || 
+                            r.name === 'conference' ||
+                            (r.displayName && r.displayName.toLowerCase().includes('conference'))
+                          );
+                          console.log('Conference record item found:', confRecordItem ? 'YES' : 'NO');
+                          if (confRecordItem) {
+                            console.log('Conference record item details:', confRecordItem);
+                            if (confRecordItem.stats) {
+                              console.log('Conference record stats:', confRecordItem.stats);
+                            }
+                          }
+                        }
+                        // Check stats array for conference-related stats
+                        const confStats = stats.filter(s => 
+                          (s.name && s.name.toLowerCase().includes('conf')) || 
+                          (s.abbreviation && s.abbreviation.includes('CONF')) ||
+                          (s.displayName && s.displayName.toLowerCase().includes('conference'))
+                        );
+                        console.log('Conference-related stats in main stats array:', confStats.length > 0 ? confStats : 'NONE FOUND');
+                        console.log('=== END DEBUG ===');
                       }
                       
                       // Get streak - try multiple variations
@@ -571,59 +702,109 @@
                       );
                       const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
                       
-                      // Get division record - check record.items or stats
+                      // Get division record - prioritize team.record.items as it's more reliable
+                      let divRecord = '0-0';
+                      
+                      // First, check team.record.items for division record (most reliable source)
+                      if (team.record && team.record.items) {
+                        const divRecordItem = team.record.items.find(r => 
+                          r.type === 'division' || 
+                          r.name === 'division' ||
+                          (r.displayName && r.displayName.toLowerCase().includes('division'))
+                        );
+                        if (divRecordItem) {
+                          // Try summary field first (e.g., "3-2")
+                          if (divRecordItem.summary) {
+                            divRecord = divRecordItem.summary;
+                          } 
+                          // Fallback to stats array if summary not available
+                          else if (divRecordItem.stats) {
+                            const divWinStat = divRecordItem.stats.find(s => 
+                              s.name === 'wins' || 
+                              s.abbreviation === 'W' ||
+                              s.displayName?.toLowerCase().includes('win')
+                            );
+                            const divLossStat = divRecordItem.stats.find(s => 
+                              s.name === 'losses' || 
+                              s.abbreviation === 'L' ||
+                              s.displayName?.toLowerCase().includes('loss')
+                            );
+                            const divWins = parseInt(divWinStat?.value || divWinStat?.displayValue || 0);
+                            const divLosses = parseInt(divLossStat?.value || divLossStat?.displayValue || 0);
+                            divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
+                          }
+                        }
+                      }
+                      
+                      // If still not found, check main stats array as fallback
+                      if (divRecord === '0-0') {
                       let divWins = 0, divLosses = 0;
                       const divWinsStat = stats.find(s => 
                         s.name === 'divisionWins' || 
                         s.abbreviation === 'DIV_W' ||
+                          s.abbreviation === 'DW' ||
                         s.name === 'divWins' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('win'))
                       );
                       const divLossesStat = stats.find(s => 
                         s.name === 'divisionLosses' || 
                         s.abbreviation === 'DIV_L' ||
+                          s.abbreviation === 'DL' ||
                         s.name === 'divLosses' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('loss'))
                       );
                       divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
                       divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
+                        divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
+                      }
                       
-                      // Check if division record is stored in team.record
-                      if ((divWins === 0 && divLosses === 0) && team.record && team.record.items) {
-                        const divRecord = team.record.items.find(r => r.type === 'division');
-                        if (divRecord && divRecord.stats) {
-                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                      // Get conference record - prioritize team.record.items as it's more reliable
+                      let confWins = 0, confLosses = 0;
+                      
+                      // First, check team.record.items for conference record (most reliable source)
+                      if (team.record && team.record.items) {
+                        const confRecordItem = team.record.items.find(r => 
+                          r.type === 'conference' || 
+                          r.name === 'conference' ||
+                          (r.displayName && r.displayName.toLowerCase().includes('conference'))
+                        );
+                        if (confRecordItem && confRecordItem.stats) {
+                          const confWinStat = confRecordItem.stats.find(s => 
+                            s.name === 'wins' || 
+                            s.abbreviation === 'W' ||
+                            s.displayName?.toLowerCase().includes('win')
+                          );
+                          const confLossStat = confRecordItem.stats.find(s => 
+                            s.name === 'losses' || 
+                            s.abbreviation === 'L' ||
+                            s.displayName?.toLowerCase().includes('loss')
+                          );
+                          confWins = parseInt(confWinStat?.value || confWinStat?.displayValue || 0);
+                          confLosses = parseInt(confLossStat?.value || confLossStat?.displayValue || 0);
                         }
                       }
-                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
                       
-                      // Get conference record
-                      let confWins = 0, confLosses = 0;
+                      // If still not found, check main stats array as fallback
+                      if (confWins === 0 && confLosses === 0) {
                       const confWinsStat = stats.find(s => 
                         s.name === 'conferenceWins' || 
                         s.abbreviation === 'CONF_W' ||
+                          s.abbreviation === 'CW' ||
                         s.name === 'confWins' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
+                          (s.displayName && s.displayName.toLowerCase().includes('conference') && s.displayName.toLowerCase().includes('win'))
                       );
                       const confLossesStat = stats.find(s => 
                         s.name === 'conferenceLosses' || 
                         s.abbreviation === 'CONF_L' ||
+                          s.abbreviation === 'CL' ||
                         s.name === 'confLosses' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
+                          (s.displayName && s.displayName.toLowerCase().includes('conference') && s.displayName.toLowerCase().includes('loss'))
                       );
                       confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
                       confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
-                      
-                      // Check if conference record is stored in team.record
-                      if ((confWins === 0 && confLosses === 0) && team.record && team.record.items) {
-                        const confRecord = team.record.items.find(r => r.type === 'conference');
-                        if (confRecord && confRecord.stats) {
-                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
-                        }
                       }
-                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
+                      
+                      const confRecord = (confWins > 0 || confLosses > 0) ? `${confWins}-${confLosses}` : '0-0';
                       
                       // Get home record
                       let homeWins = 0, homeLosses = 0;
@@ -681,8 +862,26 @@
                       }
                       const roadRecord = roadWins || roadLosses ? `${roadWins}-${roadLosses}` : '0-0';
                       
+                      // Normalize conference value - handle different formats from API
+                      let confValue = conference.abbreviation || conference.name || conference.shortDisplayName || '';
+                      
+                      // Normalize to AFC or NFC - trim and uppercase first
+                      const confUpper = String(confValue).toUpperCase().trim();
+                      
+                      // Determine conference - check for AFC first, then NFC
+                      if (confUpper === 'AFC' || confUpper.startsWith('AFC') || confUpper.includes('AMERICAN FOOTBALL CONFERENCE') || confUpper.includes('AMERICAN')) {
+                        confValue = 'AFC';
+                      } else if (confUpper === 'NFC' || confUpper.startsWith('NFC') || confUpper.includes('NATIONAL FOOTBALL CONFERENCE') || confUpper.includes('NATIONAL')) {
+                        confValue = 'NFC';
+                      } else {
+                        // Fallback to team name lookup
+                        confValue = getNFLConference(team.team.displayName);
+                      }
+                      
                       standings.push({
                         team: team.team.displayName,
+                        conference: confValue,
+                        division: division.abbreviation || division.name || 'Unknown',
                         w: parseInt(stats.find(s => s.name === 'wins')?.value || stats.find(s => s.abbreviation === 'W')?.value || 0),
                         l: parseInt(stats.find(s => s.name === 'losses')?.value || stats.find(s => s.abbreviation === 'L')?.value || 0),
                         pf: parseInt(stats.find(s => s.name === 'pointsFor')?.value || stats.find(s => s.abbreviation === 'PF')?.value || 0),
@@ -756,7 +955,9 @@
                   
                   if (detailResponse.ok) {
                     const teamDetail = await detailResponse.json();
-                    const record = teamDetail.team.record?.items?.[0];
+                    // Handle both array and non-array cases for items
+                    const items = teamDetail.team.record?.items;
+                    const record = Array.isArray(items) ? (items.length > 0 ? items[0] : null) : items;
                     
                     if (record && record.stats) {
                       const stats = record.stats;
@@ -883,6 +1084,8 @@
                       
                       return {
                         team: teamObj.team.displayName,
+                        conference: getNFLConference(teamObj.team.displayName),
+                        division: teamObj.team.groups?.affiliation || 'Unknown',
                         w: parseInt(stats.find(s => s.name === 'wins')?.value || 0),
                         l: parseInt(stats.find(s => s.name === 'losses')?.value || 0),
                         pf: parseInt(stats.find(s => s.name === 'pointsFor')?.value || 0),
@@ -957,8 +1160,58 @@
                       
                       // Debug: Log all available stats for first team to see structure
                       if (standings.length === 0) {
-                        console.log('First NBA team stats:', stats);
-                        console.log('NBA team record items:', team.record?.items);
+                        console.log('=== NBA API DATA STRUCTURE DEBUG ===');
+                        console.log('Team:', team.team.displayName);
+                        console.log('All stats (array):', stats);
+                        console.log('Stats array length:', stats?.length || 0);
+                        console.log('Team record:', team.record);
+                        console.log('Team record.items type:', Array.isArray(team.record?.items) ? 'Array' : typeof team.record?.items);
+                        console.log('Team record items:', team.record?.items);
+                        
+                        if (team.record && team.record.items) {
+                          // Check if items is an array
+                          if (Array.isArray(team.record.items)) {
+                            console.log('Record items is an array with length:', team.record.items.length);
+                            if (team.record.items.length > 0) {
+                              console.log('First item (index 0):', team.record.items[0]);
+                              console.log('First item type:', team.record.items[0]?.type);
+                              console.log('First item summary:', team.record.items[0]?.summary);
+                            }
+                            console.log('Record items types:', team.record.items.map(r => ({ 
+                              type: r?.type, 
+                              name: r?.name, 
+                              displayName: r?.displayName,
+                              summary: r?.summary,
+                              hasStats: !!r?.stats
+                            })));
+                          } else {
+                            console.log('Record items is NOT an array, it is:', typeof team.record.items);
+                            console.log('Record items keys:', Object.keys(team.record.items || {}));
+                          }
+                          
+                          // Debug division record specifically
+                          const itemsArray = Array.isArray(team.record.items) ? team.record.items : [team.record.items].filter(Boolean);
+                          const divRecordItem = itemsArray.find(r => 
+                            r?.type === 'division' || 
+                            r?.name === 'division' ||
+                            (r?.displayName && r.displayName.toLowerCase().includes('division'))
+                          );
+                          console.log('Division record item found:', divRecordItem ? 'YES' : 'NO');
+                          if (divRecordItem) {
+                            console.log('Division record item details:', divRecordItem);
+                            console.log('Division record item summary:', divRecordItem.summary);
+                            if (divRecordItem.stats) {
+                              console.log('Division record stats (array):', Array.isArray(divRecordItem.stats) ? divRecordItem.stats : [divRecordItem.stats]);
+                            }
+                          }
+                        }
+                        // Check stats array for division-related stats
+                        const divStats = stats.filter(s => 
+                          s?.name?.toLowerCase().includes('division') || 
+                          s?.abbreviation?.includes('DIV') ||
+                          s?.displayName?.toLowerCase().includes('division')
+                        );
+                        console.log('Division stats in main stats array:', divStats);
                       }
                       
                       // Calculate average points (try to find in stats, otherwise estimate)
@@ -983,59 +1236,82 @@
                       );
                       const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
                       
-                      // Get division record - check record.items or stats
+                      // Get division record - prioritize team.record.items as it's more reliable
+                      let divRecord = '0-0';
+                      
+                      // First, check team.record.items for division record (most reliable source)
+                      if (team.record && team.record.items) {
+                        // Handle both array and non-array cases for items
+                        const itemsArray = Array.isArray(team.record.items) ? team.record.items : [team.record.items].filter(Boolean);
+                        const divRecordItem = itemsArray.find(r => 
+                          r?.type === 'division' || 
+                          r?.name === 'division' ||
+                          (r?.displayName && r.displayName.toLowerCase().includes('division'))
+                        );
+                        if (divRecordItem) {
+                          // Try summary field first (e.g., "3-2")
+                          if (divRecordItem.summary) {
+                            divRecord = divRecordItem.summary;
+                            if (standings.length === 0) {
+                              console.log('Division record from record.items summary:', divRecord);
+                            }
+                          } 
+                          // Fallback to stats array if summary not available
+                          else if (divRecordItem.stats) {
+                            // Handle both array and non-array cases for stats
+                            const statsArray = Array.isArray(divRecordItem.stats) ? divRecordItem.stats : [divRecordItem.stats].filter(Boolean);
+                            const divWinStat = statsArray.find(s => 
+                              s?.name === 'wins' || 
+                              s?.abbreviation === 'W' ||
+                              s?.displayName?.toLowerCase().includes('win')
+                            );
+                            const divLossStat = statsArray.find(s => 
+                              s?.name === 'losses' || 
+                              s?.abbreviation === 'L' ||
+                              s?.displayName?.toLowerCase().includes('loss')
+                            );
+                            const divWins = parseInt(divWinStat?.value || divWinStat?.displayValue || 0);
+                            const divLosses = parseInt(divLossStat?.value || divLossStat?.displayValue || 0);
+                            divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
+                            
+                            if (standings.length === 0) {
+                              console.log('Division record from record.items stats:', divRecord);
+                            }
+                          }
+                        }
+                      }
+                      
+                      // If still not found, check main stats array as fallback
+                      if (divRecord === '0-0') {
                       let divWins = 0, divLosses = 0;
                       const divWinsStat = stats.find(s => 
                         s.name === 'divisionWins' || 
                         s.abbreviation === 'DIV_W' ||
+                          s.abbreviation === 'DW' ||
                         s.name === 'divWins' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('win'))
                       );
                       const divLossesStat = stats.find(s => 
                         s.name === 'divisionLosses' || 
                         s.abbreviation === 'DIV_L' ||
+                          s.abbreviation === 'DL' ||
                         s.name === 'divLosses' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('loss'))
                       );
                       divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
                       divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
-                      
-                      // Check if division record is stored in team.record
-                      if ((divWins === 0 && divLosses === 0) && team.record && team.record.items) {
-                        const divRecord = team.record.items.find(r => r.type === 'division');
-                        if (divRecord && divRecord.stats) {
-                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
+                        divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
+                        
+                        if (standings.length === 0) {
+                          console.log('Division record from stats array:', divRecord);
+                          console.log('divWinsStat:', divWinsStat);
+                          console.log('divLossesStat:', divLossesStat);
                         }
                       }
-                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
                       
-                      // Get conference record
-                      let confWins = 0, confLosses = 0;
-                      const confWinsStat = stats.find(s => 
-                        s.name === 'conferenceWins' || 
-                        s.abbreviation === 'CONF_W' ||
-                        s.name === 'confWins' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
-                      );
-                      const confLossesStat = stats.find(s => 
-                        s.name === 'conferenceLosses' || 
-                        s.abbreviation === 'CONF_L' ||
-                        s.name === 'confLosses' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
-                      );
-                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
-                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
-                      
-                      // Check if conference record is stored in team.record
-                      if ((confWins === 0 && confLosses === 0) && team.record && team.record.items) {
-                        const confRecord = team.record.items.find(r => r.type === 'conference');
-                        if (confRecord && confRecord.stats) {
-                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
-                        }
+                      if (standings.length === 0) {
+                        console.log('Final division record:', divRecord);
                       }
-                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
                       
                       // Get home record
                       let homeWins = 0, homeLosses = 0;
@@ -1102,7 +1378,6 @@
                         opp: avgOpp,
                         streak: streak,
                         divRecord: divRecord,
-                        confRecord: confRecord,
                         homeRecord: homeRecord,
                         roadRecord: roadRecord
                       });
@@ -1169,7 +1444,9 @@
                   
                   if (detailResponse.ok) {
                     const teamDetail = await detailResponse.json();
-                    const record = teamDetail.team.record?.items?.[0];
+                    // Handle both array and non-array cases for items
+                    const items = teamDetail.team.record?.items;
+                    const record = Array.isArray(items) ? (items.length > 0 ? items[0] : null) : items;
                     
                     if (record && record.stats) {
                       const stats = record.stats;
@@ -1191,59 +1468,65 @@
                       );
                       const streak = streakStat ? (streakStat.value || streakStat.displayValue || streakStat.summary || '0') : '0';
                       
-                      // Get division record - check record.items or stats
-                      let divWins = 0, divLosses = 0;
+                      // Get division record - prioritize team.record.items as it's more reliable
+                      let divRecord = '0-0';
+                      
+                      // First, check team.record.items for division record (most reliable source)
+                      if (teamDetail.team.record && teamDetail.team.record.items) {
+                        // Handle both array and non-array cases for items
+                        const itemsArray = Array.isArray(teamDetail.team.record.items) ? teamDetail.team.record.items : [teamDetail.team.record.items].filter(Boolean);
+                        const divRecordItem = itemsArray.find(r => 
+                          r?.type === 'division' || 
+                          r?.name === 'division' ||
+                          (r?.displayName && r.displayName.toLowerCase().includes('division'))
+                        );
+                        if (divRecordItem) {
+                          // Try summary field first (e.g., "3-2")
+                          if (divRecordItem.summary) {
+                            divRecord = divRecordItem.summary;
+                          } 
+                          // Fallback to stats array if summary not available
+                          else if (divRecordItem.stats) {
+                            // Handle both array and non-array cases for stats
+                            const statsArray = Array.isArray(divRecordItem.stats) ? divRecordItem.stats : [divRecordItem.stats].filter(Boolean);
+                            const divWinStat = statsArray.find(s => 
+                              s?.name === 'wins' || 
+                              s?.abbreviation === 'W' ||
+                              s?.displayName?.toLowerCase().includes('win')
+                            );
+                            const divLossStat = statsArray.find(s => 
+                              s?.name === 'losses' || 
+                              s?.abbreviation === 'L' ||
+                              s?.displayName?.toLowerCase().includes('loss')
+                            );
+                            const divWins = parseInt(divWinStat?.value || divWinStat?.displayValue || 0);
+                            const divLosses = parseInt(divLossStat?.value || divLossStat?.displayValue || 0);
+                            divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
+                          }
+                        }
+                      }
+                      
+                      // If still not found, check main stats array as fallback
+                      if (divRecord === '0-0') {
+                        let divWins = 0, divLosses = 0;
                       const divWinsStat = stats.find(s => 
                         s.name === 'divisionWins' || 
                         s.abbreviation === 'DIV_W' ||
+                          s.abbreviation === 'DW' ||
                         s.name === 'divWins' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('win')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('win'))
                       );
                       const divLossesStat = stats.find(s => 
                         s.name === 'divisionLosses' || 
                         s.abbreviation === 'DIV_L' ||
+                          s.abbreviation === 'DL' ||
                         s.name === 'divLosses' ||
-                        s.displayName?.toLowerCase().includes('division') && s.displayName?.toLowerCase().includes('loss')
+                          (s.displayName && s.displayName.toLowerCase().includes('division') && s.displayName.toLowerCase().includes('loss'))
                       );
                       divWins = parseInt(divWinsStat?.value || divWinsStat?.displayValue || 0);
                       divLosses = parseInt(divLossesStat?.value || divLossesStat?.displayValue || 0);
-                      
-                      // Check if division record is stored in team.record
-                      if ((divWins === 0 && divLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
-                        const divRecord = teamDetail.team.record.items.find(r => r.type === 'division');
-                        if (divRecord && divRecord.stats) {
-                          divWins = parseInt(divRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          divLosses = parseInt(divRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
-                        }
+                        divRecord = (divWins > 0 || divLosses > 0) ? `${divWins}-${divLosses}` : '0-0';
                       }
-                      const divRecord = divWins || divLosses ? `${divWins}-${divLosses}` : '0-0';
-                      
-                      // Get conference record
-                      let confWins = 0, confLosses = 0;
-                      const confWinsStat = stats.find(s => 
-                        s.name === 'conferenceWins' || 
-                        s.abbreviation === 'CONF_W' ||
-                        s.name === 'confWins' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('win')
-                      );
-                      const confLossesStat = stats.find(s => 
-                        s.name === 'conferenceLosses' || 
-                        s.abbreviation === 'CONF_L' ||
-                        s.name === 'confLosses' ||
-                        s.displayName?.toLowerCase().includes('conference') && s.displayName?.toLowerCase().includes('loss')
-                      );
-                      confWins = parseInt(confWinsStat?.value || confWinsStat?.displayValue || 0);
-                      confLosses = parseInt(confLossesStat?.value || confLossesStat?.displayValue || 0);
-                      
-                      // Check if conference record is stored in team.record
-                      if ((confWins === 0 && confLosses === 0) && teamDetail.team.record && teamDetail.team.record.items) {
-                        const confRecord = teamDetail.team.record.items.find(r => r.type === 'conference');
-                        if (confRecord && confRecord.stats) {
-                          confWins = parseInt(confRecord.stats.find(s => s.name === 'wins' || s.abbreviation === 'W')?.value || 0);
-                          confLosses = parseInt(confRecord.stats.find(s => s.name === 'losses' || s.abbreviation === 'L')?.value || 0);
-                        }
-                      }
-                      const confRecord = confWins || confLosses ? `${confWins}-${confLosses}` : '0-0';
                       
                       // Get home record
                       let homeWins = 0, homeLosses = 0;
@@ -1310,7 +1593,6 @@
                         opp: gamesPlayed > 0 ? Math.round(pointsAgainst / gamesPlayed) : 105,
                         streak: streak,
                         divRecord: divRecord,
-                        confRecord: confRecord,
                         homeRecord: homeRecord,
                         roadRecord: roadRecord
                       };
@@ -1349,6 +1631,123 @@
       return null;
     }
 
+    // Helper function to test different NBA API endpoints for division records
+    async function testNbaApiEndpoints() {
+      try {
+        console.log('=== TESTING NBA API ENDPOINTS FOR DIVISION RECORDS ===');
+        
+        // Test 1: Standings endpoint with different parameters
+        console.log('\n1. Testing standings endpoint...');
+        const standingsResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (standingsResponse.ok) {
+          const standingsData = await standingsResponse.json();
+          console.log('Standings API response structure:', {
+            hasChildren: !!standingsData.children,
+            childrenLength: standingsData.children?.length || 0,
+            firstChildType: standingsData.children?.[0]?.abbreviation || standingsData.children?.[0]?.name || 'unknown'
+          });
+          
+          // Try to find a team in the standings
+          if (standingsData.children && standingsData.children.length > 0) {
+            // Look through conferences
+            for (let confIdx = 0; confIdx < standingsData.children.length; confIdx++) {
+              const conference = standingsData.children[confIdx];
+              if (conference.children && conference.children.length > 0) {
+                // Look through divisions
+                for (let divIdx = 0; divIdx < conference.children.length; divIdx++) {
+                  const division = conference.children[divIdx];
+                  if (division.standings && division.standings.entries && division.standings.entries.length > 0) {
+                    const firstTeam = division.standings.entries[0];
+                    console.log('\n✅ Found first team:', firstTeam.team.displayName);
+                    console.log('Team record:', firstTeam.record);
+                    console.log('Team record items:', firstTeam.record?.items);
+                    
+                    if (firstTeam.record?.items) {
+                      const items = Array.isArray(firstTeam.record.items) ? firstTeam.record.items : [firstTeam.record.items];
+                      console.log(`Found ${items.length} record items:`);
+                      items.forEach((item, idx) => {
+                        console.log(`\n  Record item ${idx}:`, {
+                          type: item?.type || 'N/A',
+                          name: item?.name || 'N/A',
+                          displayName: item?.displayName || 'N/A',
+                          summary: item?.summary || 'N/A',
+                          hasStats: !!item?.stats,
+                          statsLength: item?.stats?.length || 0
+                        });
+                        // Specifically check for division
+                        if (item?.type === 'division' || item?.name === 'division' || (item?.displayName && item.displayName.toLowerCase().includes('division'))) {
+                          console.log(`  ⭐ DIVISION RECORD FOUND! Summary: ${item.summary}`);
+                          if (item.stats) {
+                            console.log('  Division stats:', item.stats);
+                          }
+                        }
+                      });
+                    }
+                    break; // Found a team, no need to continue
+                  }
+                }
+              }
+            }
+          } else {
+            console.log('⚠️ No children found in standings response');
+          }
+        } else {
+          console.log('⚠️ Standings endpoint failed:', standingsResponse.status);
+        }
+        
+        // Test 2: Get a specific team (e.g., Lakers - team ID 13)
+        console.log('\n2. Testing individual team endpoint (Lakers - ID 13)...');
+        const teamResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (teamResponse.ok) {
+          const teamData = await teamResponse.json();
+          console.log('Team name:', teamData.team?.displayName);
+          console.log('Team record:', teamData.team?.record);
+          console.log('Team record items:', teamData.team?.record?.items);
+          if (teamData.team?.record?.items) {
+            const items = Array.isArray(teamData.team.record.items) ? teamData.team.record.items : [teamData.team.record.items];
+            items.forEach((item, idx) => {
+              console.log(`Record item ${idx}:`, {
+                type: item.type,
+                name: item.name,
+                displayName: item.displayName,
+                summary: item.summary,
+                stats: item.stats?.length || 0
+              });
+              if (item.summary) {
+                console.log(`  -> Summary: ${item.summary}`);
+              }
+            });
+          }
+        }
+        
+        // Test 3: Try teams endpoint to get list
+        console.log('\n3. Testing teams list endpoint...');
+        const teamsListResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (teamsListResponse.ok) {
+          const teamsListData = await teamsListResponse.json();
+          const firstTeamFromList = teamsListData?.sports?.[0]?.leagues?.[0]?.teams?.[0]?.team;
+          if (firstTeamFromList) {
+            console.log('First team from teams list:', firstTeamFromList.displayName);
+            console.log('Team ID:', firstTeamFromList.id);
+          }
+        }
+        
+        console.log('\n=== END OF API ENDPOINT TESTING ===');
+        console.log('\n=== SUMMARY ===');
+        console.log('If you see division record data above, note which endpoint provided it and the structure.');
+        console.log('Check for "type: division" in the record items to find division records.');
+      } catch (error) {
+        console.error('Error testing NBA API endpoints:', error);
+        console.error('Error details:', error.message, error.stack);
+      }
+    }
+    
     // Helper function to log all available stats from ESPN API (for debugging)
     async function logAvailableStats() {
       try {
@@ -1393,6 +1792,25 @@
     // Uncomment the line below and refresh the page to see all available stats in console
     // Temporarily enabled to debug stat names
     // logAvailableStats();
+    
+    // Make test function available globally for console testing
+    // You can call testNbaApiEndpoints() from the browser console to test different endpoints
+    window.testNbaApiEndpoints = testNbaApiEndpoints;
+    
+    // Automatically run the test function on page load (with delay to ensure page is ready)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          console.log('=== AUTO-RUNNING NBA API ENDPOINT TEST ===');
+          testNbaApiEndpoints();
+        }, 2000);
+      });
+    } else {
+      setTimeout(function() {
+        console.log('=== AUTO-RUNNING NBA API ENDPOINT TEST ===');
+        testNbaApiEndpoints();
+      }, 2000);
+    }
 
     async function populateSports(){
       // NFL Section
@@ -1434,7 +1852,7 @@
       const nbaBody = document.getElementById('nbaBody');
       const nbaSubtitle = document.getElementById('nbaSubtitle');
       
-      nbaBody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Loading NBA data...</td></tr>';
+      nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Loading NBA data...</td></tr>';
       nbaSubtitle.innerHTML = '<span style="color:#6c757d">Fetching live standings...</span>';
       
       const nbaData = await fetchLiveNbaData();
@@ -1446,7 +1864,7 @@
           // Add data attribute for search filtering
           tr.setAttribute('data-team', r.team.toLowerCase());
           tr.style.cursor = 'default';
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nbaBody.appendChild(tr);
         });
         
@@ -1458,11 +1876,163 @@
         nbaSample.forEach((r, index) => {
           const tr = document.createElement('tr');
           tr.setAttribute('data-team', r.team.toLowerCase());
-          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.divRecord || '0-0'}</td><td>${r.confRecord || '0-0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${r.team}</td><td>${r.w}</td><td>${r.l}</td><td>${r.gb || '0.0'}</td><td>${r.pts}</td><td>${r.opp}</td><td>${r.streak || '0'}</td><td>${r.homeRecord || '0-0'}</td><td>${r.roadRecord || '0-0'}</td>`;
           nbaBody.appendChild(tr);
         });
         
         nbaSubtitle.innerHTML = '<span style="color:#dc3545">⚠ Sample data (API unavailable)</span>';
+      }
+      
+      // Populate conference standings if in conference view mode
+      if (nflViewMode === 'conference') {
+        populateConferenceStandings(nflData || nflSample);
+      }
+      
+      // Populate NBA conference standings if in conference view mode
+      if (nbaViewMode === 'conference') {
+        populateNBAConferenceStandings(nbaData || nbaSample);
+      }
+    }
+
+    // Populate NFL Conference Standings
+    function populateConferenceStandings(nflData) {
+      const afcBody = document.getElementById('afcBody');
+      const nfcBody = document.getElementById('nfcBody');
+      
+      if (!afcBody || !nfcBody) return;
+      
+      afcBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>';
+      nfcBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>';
+      
+      // Separate teams by conference
+      const afcTeams = [];
+      const nfcTeams = [];
+      
+      nflData.forEach((team) => {
+        // Always use team name lookup as primary method since API conference data may be unreliable
+        // This ensures correct classification based on known team names
+        let conference = getNFLConference(team.team);
+        
+        // Only use API conference data if it's clearly and unambiguously set
+        if (team.conference && typeof team.conference === 'string') {
+          const confUpper = String(team.conference).toUpperCase().trim();
+          // Only trust API data if it's explicitly 'AFC' or 'NFC'
+          if (confUpper === 'AFC' || confUpper === 'NFC') {
+            conference = confUpper;
+          }
+          // If API has other values, we'll rely on team name lookup (already set above)
+        }
+        
+        // Assign to correct array based on determined conference
+        if (conference === 'AFC') {
+          afcTeams.push(team);
+        } else {
+          nfcTeams.push(team);
+        }
+      });
+      
+      // Sort each conference by wins (descending), then losses (ascending)
+      const sortTeams = (a, b) => {
+        if (b.w !== a.w) return b.w - a.w;
+        return a.l - b.l;
+      };
+      
+      afcTeams.sort(sortTeams);
+      nfcTeams.sort(sortTeams);
+      
+      // Populate AFC table
+      afcBody.innerHTML = '';
+      if (afcTeams.length > 0) {
+        afcTeams.forEach((team, index) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${team.team}</td><td>${team.w}</td><td>${team.l}</td><td>${team.divRecord || '0-0'}</td>`;
+          afcBody.appendChild(tr);
+        });
+      } else {
+        afcBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No AFC teams found</td></tr>';
+      }
+      
+      // Populate NFC table
+      nfcBody.innerHTML = '';
+      if (nfcTeams.length > 0) {
+        nfcTeams.forEach((team, index) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td><strong>${index + 1}.</strong> ${team.team}</td><td>${team.w}</td><td>${team.l}</td><td>${team.divRecord || '0-0'}</td>`;
+          nfcBody.appendChild(tr);
+        });
+      } else {
+        nfcBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No NFC teams found</td></tr>';
+      }
+    }
+
+    // Populate NBA Conference Standings
+    function populateNBAConferenceStandings(nbaData) {
+      const easternBody = document.getElementById('easternBody');
+      const westernBody = document.getElementById('westernBody');
+      
+      if (!easternBody || !westernBody) return;
+      
+      easternBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+      westernBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
+      
+      // Separate teams by conference
+      const easternTeams = [];
+      const westernTeams = [];
+      
+      nbaData.forEach((team) => {
+        // Always use team name lookup as primary method since API conference data may be unreliable
+        let conference = getNBAConference(team.team);
+        
+        // Only use API conference data if it's clearly and unambiguously set
+        if (team.conference && typeof team.conference === 'string') {
+          const confUpper = String(team.conference).toUpperCase().trim();
+          // Only trust API data if it's explicitly 'Eastern' or 'Western'
+          if (confUpper === 'EASTERN' || confUpper === 'EAST') {
+            conference = 'Eastern';
+          } else if (confUpper === 'WESTERN' || confUpper === 'WEST') {
+            conference = 'Western';
+          }
+        }
+        
+        // Assign to correct array based on determined conference
+        if (conference === 'Eastern') {
+          easternTeams.push(team);
+        } else {
+          westernTeams.push(team);
+        }
+      });
+      
+      // Sort each conference by wins (descending), then losses (ascending)
+      const sortTeams = (a, b) => {
+        if (b.w !== a.w) return b.w - a.w;
+        return a.l - b.l;
+      };
+      
+      easternTeams.sort(sortTeams);
+      westernTeams.sort(sortTeams);
+      
+      // Populate Eastern Conference table
+      easternBody.innerHTML = '';
+      if (easternTeams.length > 0) {
+        easternTeams.forEach((team, index) => {
+          const tr = document.createElement('tr');
+               tr.innerHTML = `<td><strong>${index + 1}.</strong> ${team.team}</td><td>${team.w}</td><td>${team.l}</td><td>${team.gb || '0.0'}</td>`;
+          easternBody.appendChild(tr);
+        });
+      } else {
+        easternBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No Eastern teams found</td></tr>';
+      }
+      
+      // Populate Western Conference table
+      westernBody.innerHTML = '';
+      if (westernTeams.length > 0) {
+        westernTeams.forEach((team, index) => {
+          const tr = document.createElement('tr');
+               tr.innerHTML = `<td><strong>${index + 1}.</strong> ${team.team}</td><td>${team.w}</td><td>${team.l}</td><td>${team.gb || '0.0'}</td>`;
+          westernBody.appendChild(tr);
+        });
+      } else {
+            westernBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No Western teams found</td></tr>';
       }
     }
 
@@ -1646,6 +2216,63 @@
       await populateSports();
     });
 
+    // NFL View Toggle Button (Standard vs Conference View)
+    const nflViewToggle = document.getElementById('nflViewToggle');
+    const nflStandardView = document.getElementById('nflStandardView');
+    const nflConferenceView = document.getElementById('nflConferenceView');
+    
+    if (nflViewToggle && nflStandardView && nflConferenceView) {
+      nflViewToggle.addEventListener('click', () => {
+        if (nflViewMode === 'standard') {
+          // Switch to conference view
+          nflViewMode = 'conference';
+          nflStandardView.style.display = 'none';
+          nflConferenceView.style.display = 'block';
+          nflViewToggle.textContent = 'Standard View';
+          // Populate conference standings if not already populated
+          if (liveNflData) {
+            populateConferenceStandings(liveNflData);
+          } else {
+            populateConferenceStandings(nflSample);
+          }
+        } else {
+          // Switch to standard view
+          nflViewMode = 'standard';
+          nflStandardView.style.display = 'block';
+          nflConferenceView.style.display = 'none';
+          nflViewToggle.textContent = 'Conference View';
+        }
+      });
+    }
+
+    // NBA View Toggle Button (Standard vs Conference View)
+    const nbaViewToggle = document.getElementById('nbaViewToggle');
+    const nbaStandardView = document.getElementById('nbaStandardView');
+    const nbaConferenceView = document.getElementById('nbaConferenceView');
+    
+    if (nbaViewToggle && nbaStandardView && nbaConferenceView) {
+      nbaViewToggle.addEventListener('click', () => {
+        if (nbaViewMode === 'standard') {
+          // Switch to conference view
+          nbaViewMode = 'conference';
+          nbaStandardView.style.display = 'none';
+          nbaConferenceView.style.display = 'block';
+          nbaViewToggle.textContent = 'Standard View';
+          // Populate conference standings if not already populated
+          if (liveNbaData) {
+            populateNBAConferenceStandings(liveNbaData);
+          } else {
+            populateNBAConferenceStandings(nbaSample);
+          }
+        } else {
+          // Switch to standard view
+          nbaViewMode = 'standard';
+          nbaStandardView.style.display = 'block';
+          nbaConferenceView.style.display = 'none';
+          nbaViewToggle.textContent = 'Conference View';
+        }
+      });
+    }
 
     // Storage for live game scores and player stats
     let liveGameScores = [];
@@ -1653,6 +2280,8 @@
     let currentTickerGames = []; // Track games currently displayed in score ticker
     let tickerIndex = 0;
     let showPlayerStats = false; // Toggle between scores and player stats
+    let nflViewMode = 'standard'; // 'standard' or 'conference' - tracks NFL snapshot view mode
+    let nbaViewMode = 'standard'; // 'standard' or 'conference' - tracks NBA snapshot view mode
 
     // Fetch live game scores from ESPN APIs
     async function fetchLiveGameScores() {
@@ -1724,12 +2353,16 @@
                       ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation} (${status})`
                       : `${awayTeam.team.abbreviation} ${awayScore} @ ${homeScore} ${homeTeam.team.abbreviation} (${status})`;
                     
+                    // Extract game date from competition.date or event.date
+                    const gameDate = competition.date ? new Date(competition.date) : (event.date ? new Date(event.date) : null);
+                    
                     scores.push({
                       league: 'NFL',
                       text: gameText,
                       isLive: isCurrentlyInProgress,
                       isFuture: isFuture,
                       gameId: event.id,
+                      gameDate: gameDate, // Store the actual game date
                       homeTeam: {
                         name: homeTeam.team.displayName,
                         abbreviation: homeTeam.team.abbreviation,
@@ -1943,12 +2576,31 @@
         if (selectedLeague === 'NFL') {
           const mondayNightGames = liveGameScores.filter(score => {
             if (score.league !== 'NFL' || !score.isLive) return false;
-            const now = new Date();
-            const isMonday = now.getDay() === 1;
-            const isEvening = now.getHours() >= 19;
-            if (isMonday && isEvening) return true;
+            
+            // Check if this is Monday Night Football by checking the actual game date
+            if (score.gameDate) {
+              const gameDate = new Date(score.gameDate);
+              const dayOfWeek = gameDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+              const gameHour = gameDate.getHours();
+              
+              // Monday Night Football is on Monday (day 1) and typically in the evening (7 PM or later)
+              if (dayOfWeek === 1 && gameHour >= 19) {
+                return true;
+              }
+            }
+            
+            // Fallback: Check if this is the only live NFL game (typical for MNF)
             const liveNFLGames = liveGameScores.filter(s => s.league === 'NFL' && s.isLive);
-            if (liveNFLGames.length === 1 && score === liveNFLGames[0]) return true;
+            if (liveNFLGames.length === 1 && score === liveNFLGames[0]) {
+              // Double-check it's actually on a Monday using the game date
+              if (score.gameDate) {
+                const gameDate = new Date(score.gameDate);
+                if (gameDate.getDay() === 1) {
+                  return true;
+                }
+              }
+            }
+            
             return false;
           });
           
@@ -2105,24 +2757,28 @@
         const mondayNightGames = liveGameScores.filter(score => {
           if (score.league !== 'NFL' || !score.isLive) return false;
           
-          // Check if this is likely Monday Night Football by:
-          // 1. Being the only live NFL game (typical for MNF)
-          // 2. Being on a Monday (we'll check the current day)
-          // 3. Being a prime time game (later in the evening)
-          
-          const now = new Date();
-          const isMonday = now.getDay() === 1; // Monday is day 1
-          const isEvening = now.getHours() >= 19; // 7 PM or later
-          
-          // If it's Monday evening and there's a live NFL game, it's likely MNF
-          if (isMonday && isEvening) {
+          // Check if this is Monday Night Football by checking the actual game date
+          if (score.gameDate) {
+            const gameDate = new Date(score.gameDate);
+            const dayOfWeek = gameDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const gameHour = gameDate.getHours();
+            
+            // Monday Night Football is on Monday (day 1) and typically in the evening (7 PM or later)
+            if (dayOfWeek === 1 && gameHour >= 19) {
             return true;
+            }
           }
           
-          // Also check if this is the only live NFL game (typical for MNF)
+          // Fallback: Check if this is the only live NFL game (typical for MNF)
           const liveNFLGames = liveGameScores.filter(s => s.league === 'NFL' && s.isLive);
           if (liveNFLGames.length === 1 && score === liveNFLGames[0]) {
-            return true; // Single live NFL game is likely MNF
+            // Double-check it's actually on a Monday using the game date
+            if (score.gameDate) {
+              const gameDate = new Date(score.gameDate);
+              if (gameDate.getDay() === 1) {
+                return true;
+              }
+            }
           }
           
           return false;
