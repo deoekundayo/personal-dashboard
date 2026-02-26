@@ -123,36 +123,7 @@ app.get('/api/nba-stats', async (req, res) => {
                   }
                 }
                 
-                // If no real stats found for finished game, generate realistic ones
-                if (isFinished && !isLive && playerStats.length === 0) {
-                  const homePlayer = {
-                    name: `${homeTeam.team.abbreviation} Top Scorer`,
-                    team: homeTeam.team.abbreviation,
-                    points: Math.max(15, Math.floor(homeScore * 0.25 + Math.random() * 10)),
-                    rebounds: Math.floor(Math.random() * 8) + 5,
-                    assists: Math.floor(Math.random() * 8) + 3,
-                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                    league: 'NBA',
-                    isLive: false
-                  };
-                  
-                  const awayPlayer = {
-                    name: `${awayTeam.team.abbreviation} Top Scorer`,
-                    team: awayTeam.team.abbreviation,
-                    points: Math.max(15, Math.floor(awayScore * 0.25 + Math.random() * 10)),
-                    rebounds: Math.floor(Math.random() * 8) + 5,
-                    assists: Math.floor(Math.random() * 8) + 3,
-                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                    league: 'NBA',
-                    isLive: false
-                  };
-                  
-                  // Add game ID to each player stat
-                  homePlayer.gameId = event.id;
-                  awayPlayer.gameId = event.id;
-                  playerStats.push(homePlayer, awayPlayer);
-                  console.log(`Generated NBA stats for live game ${event.id}: ${homeTeam.team.abbreviation} vs ${awayTeam.team.abbreviation}`);
-                }
+                // No synthetic fallback stats: keep empty if real stats are unavailable.
               }
             }
           }
@@ -333,99 +304,6 @@ app.get('/api/nfl-stats', async (req, res) => {
                             return bYards - aYards;
                           });
                           
-                          // Check if we have players from both teams
-                          console.log(`Checking teams: Home=${homeTeam.team.abbreviation}, Away=${awayTeam.team.abbreviation}`);
-                          console.log(`Current players:`, topPerformers.map(p => `${p.name} (${p.team})`));
-                          const homeTeamPlayers = topPerformers.filter(p => p.team === homeTeam.team.abbreviation);
-                          const awayTeamPlayers = topPerformers.filter(p => p.team === awayTeam.team.abbreviation);
-                          console.log(`Home team players: ${homeTeamPlayers.length}, Away team players: ${awayTeamPlayers.length}`);
-                          
-                          // If we only have players from one team, add a realistic player from the other team
-                          if (homeTeamPlayers.length > 0 && awayTeamPlayers.length === 0) {
-                            // Add Baker Mayfield for Tampa Bay
-                            const passingYards = Math.max(100, Math.floor(awayScore * 8 + Math.random() * 50));
-                            const passingTDs = Math.floor(awayScore / 7) + Math.floor(Math.random() * 2);
-                            const attempts = Math.max(15, Math.floor(passingYards / 8) + Math.floor(Math.random() * 10));
-                            const completions = Math.floor(attempts * (0.6 + Math.random() * 0.2)); // 60-80% completion rate
-                            
-                            const tbPlayer = {
-                              name: 'Baker Mayfield',
-                              team: awayTeam.team.abbreviation,
-                              passingYards: passingYards,
-                              passingTDs: passingTDs,
-                              passingINTs: Math.floor(Math.random() * 2), // 0-1 interceptions
-                              completions: completions,
-                              attempts: attempts,
-                              game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                              league: 'NFL',
-                              isLive: true,
-                              gameId: event.id
-                            };
-                            topPerformers.push(tbPlayer);
-                            console.log(`Added TB player: ${tbPlayer.name} (${tbPlayer.team})`);
-                          } else if (awayTeamPlayers.length > 0 && homeTeamPlayers.length === 0) {
-                            // Try to get real home team QB name from boxscore API
-                            try {
-                              const boxscoreResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard/${event.id}/boxscore`, {
-                                headers: {
-                                  'Accept': 'application/json',
-                                  'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
-                                }
-                              });
-                              
-                              if (boxscoreResponse.ok) {
-                                const boxscoreData = await boxscoreResponse.json();
-                                let homeQBName = `${homeTeam.team.abbreviation} QB`; // fallback
-                                
-                                // Look for home QB in boxscore data
-                                if (boxscoreData.teams && boxscoreData.teams.length >= 2) {
-                                  const homeTeamData = boxscoreData.teams.find(t => t.team.abbreviation === homeTeam.team.abbreviation);
-                                  if (homeTeamData && homeTeamData.statistics) {
-                                    for (const stat of homeTeamData.statistics) {
-                                      if (stat.label === 'Passing') {
-                                        for (const player of stat.athletes) {
-                                          if (player.position && player.position.abbreviation === 'QB') {
-                                            homeQBName = player.athlete.displayName;
-                                            break;
-                                          }
-                                        }
-                                        break;
-                                      }
-                                    }
-                                  }
-                                }
-                                
-                                const detPlayer = {
-                                  name: homeQBName,
-                                  team: homeTeam.team.abbreviation,
-                                  passingYards: Math.max(100, Math.floor(homeScore * 8 + Math.random() * 50)),
-                                  passingTDs: Math.floor(homeScore / 7) + Math.floor(Math.random() * 2),
-                                  game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                  league: 'NFL',
-                                  isLive: false,
-                                  gameId: event.id
-                                };
-                                topPerformers.push(detPlayer);
-                                console.log(`Added home team player with real name: ${detPlayer.name} (${detPlayer.team})`);
-                              }
-                            } catch (error) {
-                              console.log('Failed to get home QB name from boxscore:', error.message);
-                              // Fallback to generic name
-                              const detPlayer = {
-                                name: `${homeTeam.team.abbreviation} QB`,
-                                team: homeTeam.team.abbreviation,
-                                passingYards: Math.max(100, Math.floor(homeScore * 8 + Math.random() * 50)),
-                                passingTDs: Math.floor(homeScore / 7) + Math.floor(Math.random() * 2),
-                                game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                league: 'NFL',
-                                isLive: true,
-                                gameId: event.id
-                              };
-                              topPerformers.push(detPlayer);
-                              console.log(`Added home team player with fallback name: ${detPlayer.name} (${detPlayer.team})`);
-                            }
-                          }
-                          
                           // Sort again and take top 4
                           topPerformers.sort((a, b) => {
                             const aYards = a.passingYards || a.rushingYards || a.receivingYards || 0;
@@ -446,35 +324,7 @@ app.get('/api/nfl-stats', async (req, res) => {
                   
                 }
                 
-                // Only generate fake stats if no real stats were found AND we've tried all endpoints
-                if (isFinished && !isLive && !realStatsFound) {
-                  console.log(`No real stats found for ${event.id}, generating simulated stats...`);
-                  const homePlayer = {
-                    name: `${homeTeam.team.abbreviation} QB`,
-                    team: homeTeam.team.abbreviation,
-                    passingYards: Math.max(150, Math.floor(homeScore * 8 + Math.random() * 100)),
-                    passingTDs: Math.floor(homeScore / 7) + Math.floor(Math.random() * 3),
-                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                    league: 'NFL',
-                    isLive: false
-                  };
-                  
-                  const awayPlayer = {
-                    name: `${awayTeam.team.abbreviation} QB`,
-                    team: awayTeam.team.abbreviation,
-                    passingYards: Math.max(150, Math.floor(awayScore * 8 + Math.random() * 100)),
-                    passingTDs: Math.floor(awayScore / 7) + Math.floor(Math.random() * 3),
-                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                    league: 'NFL',
-                    isLive: false
-                  };
-                  
-                  // Add game ID to each player stat
-                  homePlayer.gameId = event.id;
-                  awayPlayer.gameId = event.id;
-                  playerStats.push(homePlayer, awayPlayer);
-                  console.log(`Generated NFL stats for live game ${event.id}: ${homeTeam.team.abbreviation} vs ${awayTeam.team.abbreviation}`);
-                }
+                // No synthetic fallback stats: keep empty if real stats are unavailable.
               }
             }
           }

@@ -20,6 +20,8 @@ A comprehensive, interactive personal dashboard inspired by Tableau's design aes
 - **NFL Standings**: Real-time team records, points for/against from ESPN API
 - **NBA Standings**: Live basketball statistics with win-loss records and scoring averages
 - **Live Score Ticker**: Rotating display of current games with real-time updates
+- **Offseason Countdown Mode**: NFL/NBA ticker shows a live countdown to next season start when no in-season scores are expected
+- **Offseason Snapshot State**: NFL/NBA snapshot tables switch to `No stats available.` during offseason windows
 - **Team Search**: Quick lookup for specific team statistics
 - **Filter Controls**: League-specific filtering for scores and standings
 
@@ -79,7 +81,8 @@ To change the weather location from Charlotte, NC:
 - **NFL/NBA Standings**: Click "Refresh" buttons to update with latest data
 - **Search**: Use the search boxes to filter teams in each league
 - **Live Ticker**: Automatically rotates through current game scores
-- **League Filter**: Use the dropdown to show only NFL or NBA scores
+- **League Filter**: Use the NFL/NBA segmented control to switch ticker league
+- **Offseason Behavior**: Ticker shows `No scores available` + a live next-season countdown; snapshot shows `No stats available.`
 
 ### Music Section
 - **Spotify Integration**: Paste any Spotify playlist URL and click "Embed Playlist"
@@ -99,7 +102,7 @@ To change the weather location from Charlotte, NC:
 ### Sports APIs
 - **Primary**: ESPN site APIs (public endpoints)
 - **Data Types**: Standings, live scores, team statistics
-- **Update Frequency**: Manual refresh + automatic ticker updates
+- **Update Frequency**: Manual refresh + automatic ticker updates + real-time offseason countdown
 
 ### Music APIs
 - **Spotify Embed**: Official Spotify embed API
@@ -181,7 +184,7 @@ To change the weather location from Charlotte, NC:
 ### Regular Updates
 - **Sports Data**: Updates automatically every 2 minutes
 - **Weather Data**: Updates on page refresh or month selection
-- **Live Ticker**: Rotates every 5 seconds
+- **Live Ticker**: Updates every second (for countdown precision) and rotates game cards automatically
 
 ### Manual Refresh
 - Use individual refresh buttons for sports sections
