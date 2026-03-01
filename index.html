@@ -2116,14 +2116,9 @@
     }
 
     function getNflSeasonStartDate(year) {
-      // NFL regular season kickoff is Thursday after Labor Day.
-      const sepFirst = new Date(year, 8, 1);
-      const firstMondayOffset = (8 - sepFirst.getDay()) % 7;
-      const laborDay = new Date(year, 8, 1 + firstMondayOffset);
-      const kickoff = new Date(laborDay);
-      kickoff.setDate(kickoff.getDate() + 3); // Thursday after Labor Day
-      kickoff.setHours(20, 0, 0, 0);
-      return kickoff;
+      // Fixed target: Sep 10, 2026 at 8:20 PM Eastern Time.
+      // Using an explicit offset keeps the instant correct for all client time zones.
+      return new Date('2026-09-10T20:20:00-04:00');
     }
 
     function getNflOffseasonCountdown(now = new Date()) {
@@ -2709,6 +2704,8 @@
     let livePlayerStats = [];
     let currentTickerGames = []; // Track games currently displayed in score ticker
     let tickerIndex = 0;
+    const TICKER_ROTATION_MS = 4000;
+    let lastTickerAdvanceAt = null;
     let showPlayerStats = false; // Toggle between scores and player stats
     let nflViewMode = 'standard'; // 'standard' or 'conference' - tracks NFL snapshot view mode
     let nbaViewMode = 'standard'; // 'standard' or 'conference' - tracks NBA snapshot view mode
@@ -3243,6 +3240,7 @@
       
       // Check if we have scores for the selected filter
       if (filteredScores.length === 0) {
+        lastTickerAdvanceAt = null;
         if (selectedLeague === 'NFL') {
           const nflCountdown = getNflOffseasonCountdown();
           if (nflCountdown.active) {
@@ -3429,7 +3427,15 @@
       
       // Only increment ticker index if we're rotating through multiple games
       if (selectedLeague !== 'NFL' || filteredScores.length > 1) {
-        tickerIndex++;
+        const now = Date.now();
+        if (lastTickerAdvanceAt === null) {
+          lastTickerAdvanceAt = now;
+        } else if (now - lastTickerAdvanceAt >= TICKER_ROTATION_MS) {
+          tickerIndex++;
+          lastTickerAdvanceAt = now;
+        }
+      } else {
+        lastTickerAdvanceAt = null;
       }
     }
 
@@ -3473,6 +3479,7 @@
         // Set league filter and update display
         window.selectedLeague = 'NFL';
         tickerIndex = 0; // Reset rotation when filter changes
+        lastTickerAdvanceAt = null;
         updateLiveTicker(); // Immediately update display
         updatePlayerStatsDisplay(); // Update player stats too
       });
@@ -3485,6 +3492,7 @@
         // Set league filter and update display
         window.selectedLeague = 'NBA';
         tickerIndex = 0; // Reset rotation when filter changes
+        lastTickerAdvanceAt = null;
         updateLiveTicker(); // Immediately update display
         updatePlayerStatsDisplay(); // Update player stats too
       });
