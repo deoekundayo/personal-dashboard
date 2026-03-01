@@ -1,10 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const path = require('path');
 
 const app = express();
 const PORT = 3000;
+const REQUEST_TIMEOUT_MS = 7000;
+const CACHE_TTL_MS = 45 * 1000;
+const ESPN_HEADERS = {
+  Accept: 'application/json',
+  'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
+};
+const responseCache = new Map();
 
 // Enable CORS for all routes
 app.use(cors());
@@ -12,132 +18,232 @@ app.use(cors());
 // Serve static files from the current directory
 app.use(express.static('.'));
 
-// NBA player stats endpoint
-app.get('/api/nba-stats', async (req, res) => {
+function getCachedValue(key) {
+  const cached = responseCache.get(key);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp > CACHE_TTL_MS) {
+    responseCache.delete(key);
+    return null;
+  }
+  return cached.value;
+}
+
+function setCachedValue(key, value) {
+  responseCache.set(key, { timestamp: Date.now(), value });
+}
+
+async function fetchJsonWithTimeout(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
-    console.log('Fetching NBA stats...');
-    
-    // Try ESPN API for recent games first
-    const espnResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
-      }
+    const response = await fetch(url, {
+      headers: ESPN_HEADERS,
+      signal: controller.signal
     });
-    
-    const playerStats = [];
-    let hasLiveGames = false;
-    
-    if (espnResponse.ok) {
-      const espnData = await espnResponse.json();
-      console.log('ESPN NBA data:', espnData);
-      
-      if (espnData.events && espnData.events.length > 0) {
-        // Get the first 5 games (same as score ticker) - only process live games
-        const recentGames = espnData.events.slice(0, 5);
-        
-        for (const event of recentGames) {
-          if (event.competitions && event.competitions[0]) {
-            const competition = event.competitions[0];
-            const competitors = competition.competitors;
-            
-            if (competitors && competitors.length >= 2) {
-              const homeTeam = competitors.find(c => c.homeAway === 'home');
-              const awayTeam = competitors.find(c => c.homeAway === 'away');
-              
-              if (homeTeam && awayTeam) {
-                const isLive = competition.status?.type?.state === 'in';
-                const homeScore = parseInt(homeTeam.score || 0);
-                const awayScore = parseInt(awayTeam.score || 0);
-                
-                const isFinished = competition.status?.type?.state === 'post';
-                
-                // Only process finished games (not live games)
-                if (isFinished && !isLive) {
-                  hasLiveGames = false; // We're only showing finished games
-                  console.log(`Finished NBA game detected: ${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`);
-                  
-                  // For finished games, try to fetch real player stats
-                  try {
-                    const gameResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard/${event.id}`, {
-                      headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
-                      }
-                    });
-                    
-                    if (gameResponse.ok) {
-                      const gameData = await gameResponse.json();
-                      console.log(`Fetched detailed NBA game data for ${event.id}`);
-                      
-                      // Extract real player stats from boxscore if available
-                      if (gameData.boxscore && gameData.boxscore.players) {
-                        const players = gameData.boxscore.players;
-                        const topPerformers = [];
-                        
-                        // Process both teams
-                        for (const team of players) {
-                          if (team.statistics && team.statistics.length > 0) {
-                            const stats = team.statistics[0];
-                            if (stats.athletes) {
-                              for (const athlete of stats.athletes.slice(0, 2)) { // Top 2 from each team
-                                if (athlete.athlete && athlete.stats) {
-                                  const playerName = athlete.athlete.displayName || 'Unknown Player';
-                                  const teamAbbr = team.team ? team.team.abbreviation : 'UNK';
-                                  const points = parseInt(athlete.stats[0] || 0);
-                                  const rebounds = parseInt(athlete.stats[1] || 0);
-                                  const assists = parseInt(athlete.stats[2] || 0);
-                                  
-                                  if (points > 0) { // Only include players with points
-                                    topPerformers.push({
-                                      name: playerName,
-                                      team: teamAbbr,
-                                      points: points,
-                                      rebounds: rebounds,
-                                      assists: assists,
-                                      game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                      league: 'NBA',
-                                      isLive: true
-                                    });
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                        
-                        // Sort by points and take top 2
-                        topPerformers.sort((a, b) => b.points - a.points);
-                        const topTwo = topPerformers.slice(0, 2);
-                        // Add game ID to each player stat
-                        topTwo.forEach(player => {
-                          player.gameId = event.id;
-                          player.isLive = false; // Finished game
-                        });
-                        playerStats.push(...topTwo);
-                        console.log(`Added ${topTwo.length} real NBA players from live game ${event.id}`);
-                      }
-                    }
-                  } catch (gameError) {
-                    console.log(`Could not fetch detailed NBA stats for ${event.id}:`, gameError.message);
-                  }
-                }
-                
-                // No synthetic fallback stats: keep empty if real stats are unavailable.
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.log(`Fetch failed for ${url}:`, error.message);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function getNbaStatsData() {
+  console.log('Fetching NBA stats...');
+  const espnData = await fetchJsonWithTimeout('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard');
+  const playerStats = [];
+
+  if (espnData?.events?.length) {
+    const recentGames = espnData.events.slice(0, 5);
+    const finishedGames = recentGames.filter((event) => {
+      const competition = event.competitions?.[0];
+      if (!competition) return false;
+      return competition.status?.type?.state === 'post';
+    });
+
+    const detailedGameStats = await Promise.all(
+      finishedGames.map(async (event) => {
+        const competition = event.competitions?.[0];
+        const competitors = competition?.competitors;
+        if (!competitors || competitors.length < 2) return [];
+
+        const homeTeam = competitors.find((c) => c.homeAway === 'home');
+        const awayTeam = competitors.find((c) => c.homeAway === 'away');
+        if (!homeTeam || !awayTeam) return [];
+
+        const gameData = await fetchJsonWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard/${event.id}`);
+        if (!gameData?.boxscore?.players) return [];
+
+        const topPerformers = [];
+        for (const team of gameData.boxscore.players) {
+          const stats = team.statistics?.[0];
+          if (!stats?.athletes) continue;
+
+          for (const athlete of stats.athletes.slice(0, 2)) {
+            if (!athlete.athlete || !athlete.stats) continue;
+
+            const points = parseInt(athlete.stats[0] || 0, 10);
+            if (points <= 0) continue;
+
+            topPerformers.push({
+              name: athlete.athlete.displayName || 'Unknown Player',
+              team: team.team ? team.team.abbreviation : 'UNK',
+              points,
+              rebounds: parseInt(athlete.stats[1] || 0, 10),
+              assists: parseInt(athlete.stats[2] || 0, 10),
+              game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
+              league: 'NBA',
+              gameId: event.id,
+              isLive: false
+            });
+          }
+        }
+
+        topPerformers.sort((a, b) => b.points - a.points);
+        return topPerformers.slice(0, 2);
+      })
+    );
+
+    detailedGameStats.forEach((stats) => playerStats.push(...stats));
+  }
+
+  return {
+    success: true,
+    data: playerStats,
+    source: 'espn',
+    hasLiveGames: false
+  };
+}
+
+async function getNflStatsData() {
+  console.log('Fetching NFL stats...');
+  const espnData = await fetchJsonWithTimeout('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard');
+  const playerStats = [];
+
+  if (espnData?.events?.length) {
+    const recentGames = espnData.events.slice(0, 5);
+    const finishedGames = recentGames.filter((event) => {
+      const competition = event.competitions?.[0];
+      if (!competition) return false;
+      return competition.status?.type?.state === 'post';
+    });
+
+    const detailedGameStats = await Promise.all(
+      finishedGames.map(async (event) => {
+        const competition = event.competitions?.[0];
+        const competitors = competition?.competitors;
+        if (!competitors || competitors.length < 2) return [];
+
+        const homeTeam = competitors.find((c) => c.homeAway === 'home');
+        const awayTeam = competitors.find((c) => c.homeAway === 'away');
+        if (!homeTeam || !awayTeam) return [];
+
+        const gameData = await fetchJsonWithTimeout(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard/${event.id}`);
+        const leaders = gameData?.competitions?.[0]?.leaders;
+        if (!leaders?.length) return [];
+
+        const topPerformers = [];
+        for (const category of leaders) {
+          if (!category.leaders?.length) continue;
+          const topLeaders = category.leaders.slice(0, 2);
+
+          for (const leader of topLeaders) {
+            if (!leader.athlete || !leader.displayValue) continue;
+
+            let teamAbbr = 'UNK';
+            if (leader.team?.id) {
+              const competitor = competitors.find((c) => c.team.id === leader.team.id);
+              if (competitor) teamAbbr = competitor.team.abbreviation;
+            }
+
+            let stats = {};
+            if (category.name === 'passingYards') {
+              const match = leader.displayValue.match(/(\d+)\/(\d+),\s*(\d+)\s*YDS,\s*(\d+)\s*TD(?:,\s*(\d+)\s*INT)?/);
+              if (match) {
+                stats = {
+                  name: leader.athlete.displayName || 'Unknown Player',
+                  team: teamAbbr,
+                  passingYards: parseInt(match[3], 10),
+                  passingTDs: parseInt(match[4], 10),
+                  passingINTs: parseInt(match[5] || 0, 10),
+                  completions: parseInt(match[1], 10),
+                  attempts: parseInt(match[2], 10),
+                  game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
+                  league: 'NFL',
+                  isLive: false,
+                  gameId: event.id
+                };
               }
+            } else if (category.name === 'rushingYards') {
+              const match = leader.displayValue.match(/(\d+)\s*CAR,\s*(\d+)\s*YDS(?:,\s*(\d+)\s*TD)?/);
+              if (match) {
+                stats = {
+                  name: leader.athlete.displayName || 'Unknown Player',
+                  team: teamAbbr,
+                  rushingYards: parseInt(match[2], 10),
+                  rushingTDs: parseInt(match[3] || 0, 10),
+                  rushingAttempts: parseInt(match[1], 10),
+                  game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
+                  league: 'NFL',
+                  isLive: false,
+                  gameId: event.id
+                };
+              }
+            } else if (category.name === 'receivingYards') {
+              const match = leader.displayValue.match(/(\d+)\s*REC,\s*(\d+)\s*YDS(?:,\s*(\d+)\s*TD)?/);
+              if (match) {
+                stats = {
+                  name: leader.athlete.displayName || 'Unknown Player',
+                  team: teamAbbr,
+                  receivingYards: parseInt(match[2], 10),
+                  receivingTDs: parseInt(match[3] || 0, 10),
+                  receivingCatches: parseInt(match[1], 10),
+                  game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
+                  league: 'NFL',
+                  isLive: false,
+                  gameId: event.id
+                };
+              }
+            }
+
+            if (Object.keys(stats).length > 0) {
+              topPerformers.push(stats);
             }
           }
         }
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: playerStats, // Return all finished game stats
-      source: 'espn',
-      hasLiveGames: false // We're only showing finished games
-    });
-    
+
+        topPerformers.sort((a, b) => {
+          const aYards = a.passingYards || a.rushingYards || a.receivingYards || 0;
+          const bYards = b.passingYards || b.rushingYards || b.receivingYards || 0;
+          return bYards - aYards;
+        });
+        return topPerformers.slice(0, 4);
+      })
+    );
+
+    detailedGameStats.forEach((stats) => playerStats.push(...stats));
+  }
+
+  return {
+    success: true,
+    data: playerStats,
+    source: 'espn',
+    hasLiveGames: false
+  };
+}
+
+// NBA player stats endpoint
+app.get('/api/nba-stats', async (req, res) => {
+  try {
+    const cached = getCachedValue('nba-stats');
+    if (cached) return res.json(cached);
+
+    const response = await getNbaStatsData();
+    setCachedValue('nba-stats', response);
+    res.json(response);
   } catch (error) {
     console.error('NBA stats error:', error.message);
     res.json({
@@ -151,194 +257,12 @@ app.get('/api/nba-stats', async (req, res) => {
 // NFL player stats endpoint
 app.get('/api/nfl-stats', async (req, res) => {
   try {
-    console.log('Fetching NFL stats...');
-    
-    // Try ESPN API for recent games
-    const espnResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard', {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
-      }
-    });
-    
-    const playerStats = [];
-    let hasLiveGames = false;
-    
-    if (espnResponse.ok) {
-      const espnData = await espnResponse.json();
-      console.log('ESPN NFL data:', espnData);
-      
-      if (espnData.events && espnData.events.length > 0) {
-        // Get the first 5 games (same as score ticker) - only process live games
-        const recentGames = espnData.events.slice(0, 5);
-        
-        for (const event of recentGames) {
-          if (event.competitions && event.competitions[0]) {
-            const competition = event.competitions[0];
-            const competitors = competition.competitors;
-            
-            if (competitors && competitors.length >= 2) {
-              const homeTeam = competitors.find(c => c.homeAway === 'home');
-              const awayTeam = competitors.find(c => c.homeAway === 'away');
-              
-              if (homeTeam && awayTeam) {
-                const isLive = competition.status?.type?.state === 'in';
-                const homeScore = parseInt(homeTeam.score || 0);
-                const awayScore = parseInt(awayTeam.score || 0);
-                
-                // For finished games, try to fetch real player stats from multiple ESPN endpoints
-                let realStatsFound = false;
-                const isFinished = competition.status?.type?.state === 'post';
-                
-                if (isFinished && !isLive) {
-                  hasLiveGames = false; // We're only showing finished games
-                  console.log(`Finished NFL game detected: ${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`);
-                  
-                  try {
-                    // Try the detailed game endpoint first
-                    const gameResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard/${event.id}`, {
-                      headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
-                      }
-                    });
-                    
-                    if (gameResponse.ok) {
-                      const gameData = await gameResponse.json();
-                      console.log(`Fetched detailed NFL game data for ${event.id}`);
-                      
-                      // Extract real player stats from the leaders section
-                      if (gameData.competitions && gameData.competitions[0] && gameData.competitions[0].leaders) {
-                        const leaders = gameData.competitions[0].leaders;
-                        const topPerformers = [];
-                        
-                        // Process each category of leaders - get top performers from both teams
-                        for (const category of leaders) {
-                          if (category.leaders && category.leaders.length > 0) {
-                            // Get up to 2 leaders (one from each team if available)
-                            const topLeaders = category.leaders.slice(0, 2);
-                            
-                            for (const leader of topLeaders) {
-                            
-                            if (leader.athlete && leader.displayValue) {
-                              const playerName = leader.athlete.displayName || 'Unknown Player';
-                              // Map team ID to abbreviation
-                              let teamAbbr = 'UNK';
-                              if (leader.team && leader.team.id) {
-                                // Find the team abbreviation from the competitors data
-                                const teamId = leader.team.id;
-                                const competitor = competitors.find(c => c.team.id === teamId);
-                                if (competitor) {
-                                  teamAbbr = competitor.team.abbreviation;
-                                }
-                              }
-                              
-                              // Parse the display value to extract stats
-                              let stats = {};
-                              
-                              if (category.name === 'passingYards') {
-                                // Parse "13/19, 183 YDS, 1 TD, 1 INT"
-                                const match = leader.displayValue.match(/(\d+)\/(\d+),\s*(\d+)\s*YDS,\s*(\d+)\s*TD(?:,\s*(\d+)\s*INT)?/);
-                                if (match) {
-                                  stats = {
-                                    name: playerName,
-                                    team: teamAbbr,
-                                    passingYards: parseInt(match[3]),
-                                    passingTDs: parseInt(match[4]),
-                                    passingINTs: parseInt(match[5] || 0),
-                                    completions: parseInt(match[1]),
-                                    attempts: parseInt(match[2]),
-                                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                    league: 'NFL',
-                                    isLive: true,
-                                    gameId: event.id
-                                  };
-                                }
-                              } else if (category.name === 'rushingYards') {
-                                // Parse "11 CAR, 107 YDS, 1 TD"
-                                const match = leader.displayValue.match(/(\d+)\s*CAR,\s*(\d+)\s*YDS(?:,\s*(\d+)\s*TD)?/);
-                                if (match) {
-                                  stats = {
-                                      name: playerName,
-                                      team: teamAbbr,
-                                    rushingYards: parseInt(match[2]),
-                                    rushingTDs: parseInt(match[3] || 0),
-                                    rushingAttempts: parseInt(match[1]),
-                                      game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                      league: 'NFL',
-                                    isLive: true,
-                                    gameId: event.id
-                                  };
-                                }
-                              } else if (category.name === 'receivingYards') {
-                                // Parse "5 REC, 87 YDS, 1 TD"
-                                const match = leader.displayValue.match(/(\d+)\s*REC,\s*(\d+)\s*YDS(?:,\s*(\d+)\s*TD)?/);
-                                if (match) {
-                                  stats = {
-                                    name: playerName,
-                                    team: teamAbbr,
-                                    receivingYards: parseInt(match[2]),
-                                    receivingTDs: parseInt(match[3] || 0),
-                                    receivingCatches: parseInt(match[1]),
-                                    game: `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`,
-                                    league: 'NFL',
-                                    isLive: true,
-                                    gameId: event.id
-                                  };
-                                }
-                              }
-                              
-                              if (Object.keys(stats).length > 0) {
-                                topPerformers.push(stats);
-                                }
-                              }
-                            }
-                          }
-                        }
-                        
-                        if (topPerformers.length > 0) {
-                          // Sort by total yards (passing, rushing, or receiving) and take top performers
-                          topPerformers.sort((a, b) => {
-                            const aYards = a.passingYards || a.rushingYards || a.receivingYards || 0;
-                            const bYards = b.passingYards || b.rushingYards || b.receivingYards || 0;
-                            return bYards - aYards;
-                          });
-                          
-                          // Sort again and take top 4
-                          topPerformers.sort((a, b) => {
-                            const aYards = a.passingYards || a.rushingYards || a.receivingYards || 0;
-                            const bYards = b.passingYards || b.rushingYards || b.receivingYards || 0;
-                            return bYards - aYards;
-                          });
-                          
-                          const topFour = topPerformers.slice(0, 4);
-                          playerStats.push(...topFour);
-                          console.log(`Added ${topFour.length} NFL players from live game ${event.id}:`, topFour.map(p => `${p.name} (${p.team})`));
-                          realStatsFound = true;
-                        }
-                      }
-                    }
-                  } catch (gameError) {
-                    console.log(`Could not fetch detailed NFL stats for ${event.id}:`, gameError.message);
-                  }
-                  
-                }
-                
-                // No synthetic fallback stats: keep empty if real stats are unavailable.
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: playerStats, // Return all finished game stats
-      source: 'espn',
-      hasLiveGames: false // We're only showing finished games
-    });
-    
+    const cached = getCachedValue('nfl-stats');
+    if (cached) return res.json(cached);
+
+    const response = await getNflStatsData();
+    setCachedValue('nfl-stats', response);
+    res.json(response);
   } catch (error) {
     console.error('NFL stats error:', error.message);
     res.json({
@@ -353,27 +277,27 @@ app.get('/api/nfl-stats', async (req, res) => {
 app.get('/api/player-stats', async (req, res) => {
   try {
     console.log('Fetching combined player stats...');
-    
-    const [nbaResponse, nflResponse] = await Promise.all([
-      fetch('http://localhost:3000/api/nba-stats'),
-      fetch('http://localhost:3000/api/nfl-stats')
+
+    const cached = getCachedValue('player-stats');
+    if (cached) return res.json(cached);
+
+    const [nbaData, nflData] = await Promise.all([
+      getCachedValue('nba-stats') || getNbaStatsData(),
+      getCachedValue('nfl-stats') || getNflStatsData()
     ]);
-    
-    const nbaData = await nbaResponse.json();
-    const nflData = await nflResponse.json();
-    
-    const allStats = [
-      ...(nbaData.data || []),
-      ...(nflData.data || [])
-    ];
-    
-    res.json({
+
+    setCachedValue('nba-stats', nbaData);
+    setCachedValue('nfl-stats', nflData);
+
+    const response = {
       success: true,
-      data: allStats,
+      data: [...(nbaData.data || []), ...(nflData.data || [])],
       nba: nbaData,
       nfl: nflData
-    });
-    
+    };
+
+    setCachedValue('player-stats', response);
+    res.json(response);
   } catch (error) {
     console.error('Combined stats error:', error.message);
     res.json({
