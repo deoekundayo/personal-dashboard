@@ -284,84 +284,125 @@
     // OpenWeatherMap API configuration
     const WEATHER_API_KEY = 'demo'; // Using demo key - replace with your actual API key
     const CHARLOTTE_COORDS = { lat: 35.2271, lon: -80.8431 }; // Charlotte, NC coordinates
+    const WEATHER_REQUEST_TIMEOUT_MS = 4500;
+    const WEATHER_CACHE_TTL_MS = 60000;
+    const SPORTS_REQUEST_TIMEOUT_MS = 4500;
+    const STANDINGS_CACHE_TTL_MS = 120000;
+    const TICKER_CACHE_TTL_MS = 30000;
+    let cachedCurrentWeather = null;
+    let cachedNflStandings = null;
+    let cachedNbaStandings = null;
+    let cachedTickerScores = null;
     
     // League filter - default to NFL
     window.selectedLeague = 'NFL';
 
-    // Fetch current temperature for Charlotte using free weather API
-    async function fetchCurrentTemperature() {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = WEATHER_REQUEST_TIMEOUT_MS) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        console.log('Fetching current temperature for Charlotte...');
-        
-        // Try wttr.in (free weather service, no API key required)
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    function firstSuccessful(promises) {
+      return new Promise((resolve, reject) => {
+        let pending = promises.length;
+        let resolved = false;
+
+        promises.forEach((promise) => {
+          Promise.resolve(promise)
+            .then((value) => {
+              if (resolved) return;
+              if (value) {
+                resolved = true;
+                resolve(value);
+                return;
+              }
+              pending -= 1;
+              if (pending === 0) reject(new Error('All weather sources failed'));
+            })
+            .catch(() => {
+              if (resolved) return;
+              pending -= 1;
+              if (pending === 0) reject(new Error('All weather sources failed'));
+            });
+        });
+      });
+    }
+
+    async function fetchWttrCurrentTemperature() {
+      try {
         const wttrUrl = 'https://wttr.in/Charlotte,NC?format=j1';
-        
-        try {
-          const response = await fetch(wttrUrl, {
+        const response = await fetchWithTimeout(
+          wttrUrl,
+          {
             headers: {
               'Accept': 'application/json',
               'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
             }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Weather data received:', data);
-            
-            if (data.current_condition && data.current_condition[0]) {
-              const current = data.current_condition[0];
-              const currentTemp = parseInt(current.temp_F);
-              const weatherDescription = current.weatherDesc[0].value;
-              const feelsLike = parseInt(current.FeelsLikeF);
-              const humidity = parseInt(current.humidity);
-              const windSpeed = parseInt(current.windspeedMiles);
-              
-              return { 
-                currentTemp, 
-                weatherDescription, 
-                source: 'Live API (wttr.in)',
-                feelsLike,
-                humidity,
-                windSpeed
-              };
-            }
           }
-        } catch (apiError) {
-          console.log('wttr.in API failed:', apiError.message);
-        }
-        
-        // Try alternative free API - Open-Meteo (no API key required)
-        try {
-          const meteoUrl = `https://api.open-meteo.com/v1/current?latitude=${CHARLOTTE_COORDS.lat}&longitude=${CHARLOTTE_COORDS.lon}&current_weather=true&temperature_unit=fahrenheit`;
-          
-          const response = await fetch(meteoUrl);
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Open-Meteo data received:', data);
-            
-            if (data.current_weather) {
-              const current = data.current_weather;
-              const currentTemp = Math.round(current.temperature);
-              
-              return { 
-                currentTemp, 
-                weatherDescription: 'Current Conditions',
-                source: 'Live API (Open-Meteo)',
-                feelsLike: currentTemp,
-                humidity: 50, // Not provided by this API
-                windSpeed: Math.round(current.windspeed * 0.621371) // Convert km/h to mph
-              };
-            }
-          }
-        } catch (meteoError) {
-          console.log('Open-Meteo API failed:', meteoError.message);
-        }
-        
-        // Fallback to realistic current temperature
-        return generateCurrentTemperatureFallback();
-        
+        );
+
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data.current_condition || !data.current_condition[0]) return null;
+
+        const current = data.current_condition[0];
+        return {
+          currentTemp: parseInt(current.temp_F, 10),
+          weatherDescription: current.weatherDesc[0].value,
+          source: 'Live API (wttr.in)',
+          feelsLike: parseInt(current.FeelsLikeF, 10),
+          humidity: parseInt(current.humidity, 10),
+          windSpeed: parseInt(current.windspeedMiles, 10)
+        };
       } catch (error) {
-        console.log('Current temperature fetch failed:', error.message);
+        return null;
+      }
+    }
+
+    async function fetchOpenMeteoCurrentTemperature() {
+      try {
+        const meteoUrl = `https://api.open-meteo.com/v1/current?latitude=${CHARLOTTE_COORDS.lat}&longitude=${CHARLOTTE_COORDS.lon}&current_weather=true&temperature_unit=fahrenheit`;
+        const response = await fetchWithTimeout(meteoUrl);
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (!data.current_weather) return null;
+
+        const current = data.current_weather;
+        const currentTemp = Math.round(current.temperature);
+        return {
+          currentTemp,
+          weatherDescription: 'Current Conditions',
+          source: 'Live API (Open-Meteo)',
+          feelsLike: currentTemp,
+          humidity: 50, // Not provided by this API
+          windSpeed: Math.round(current.windspeed * 0.621371) // Convert km/h to mph
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    // Fetch current temperature for Charlotte using free weather APIs in parallel
+    async function fetchCurrentTemperature() {
+      const now = Date.now();
+      if (cachedCurrentWeather && now - cachedCurrentWeather.timestamp < WEATHER_CACHE_TTL_MS) {
+        return cachedCurrentWeather.value;
+      }
+
+      try {
+        const weather = await firstSuccessful([
+          fetchWttrCurrentTemperature(),
+          fetchOpenMeteoCurrentTemperature()
+        ]);
+        cachedCurrentWeather = { value: weather, timestamp: now };
+        return weather;
+      } catch (error) {
         return generateCurrentTemperatureFallback();
       }
     }
@@ -570,7 +611,7 @@
       weatherChart.data.labels = data.labels;
       weatherChart.data.datasets[0].data = data.highs;
       weatherChart.data.datasets[1].data = data.lows;
-      weatherChart.update();
+      weatherChart.update('none');
       
       // Update chart subtitle to show data source
       const weatherChartCard = document.querySelector('#weatherChartLarge').closest('.chart-card');
@@ -653,15 +694,21 @@
 
     // Fetch live NFL data from ESPN API
     async function fetchLiveNflData() {
+      const now = Date.now();
+      if (cachedNflStandings && now - cachedNflStandings.timestamp < STANDINGS_CACHE_TTL_MS) {
+        liveNflData = cachedNflStandings.value;
+        return liveNflData;
+      }
+
       try {
         console.log('Fetching live NFL data from ESPN API...');
         
         // Try ESPN NFL standings API (primary)
-        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings', {
+        const response = await fetchWithTimeout('https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings', {
           headers: {
             'Accept': 'application/json'
           }
-        });
+        }, SPORTS_REQUEST_TIMEOUT_MS);
         
         if (response.ok) {
           const data = await response.json();
@@ -931,6 +978,7 @@
             });
             
             liveNflData = standings; // Include all teams (32 NFL teams)
+            cachedNflStandings = { value: liveNflData, timestamp: Date.now() };
             console.log(`Successfully fetched ${liveNflData.length} NFL teams`);
             return liveNflData;
           }
@@ -940,7 +988,11 @@
       }
       
       // Try alternative API
-      return await fetchNflAlternativeData();
+      const alternativeData = await fetchNflAlternativeData();
+      if (alternativeData && alternativeData.length > 0) {
+        cachedNflStandings = { value: alternativeData, timestamp: Date.now() };
+      }
+      return alternativeData;
     }
 
     // Alternative NFL data fetch method
@@ -1153,15 +1205,21 @@
 
     // Fetch live NBA data from ESPN API
     async function fetchLiveNbaData() {
+      const now = Date.now();
+      if (cachedNbaStandings && now - cachedNbaStandings.timestamp < STANDINGS_CACHE_TTL_MS) {
+        liveNbaData = cachedNbaStandings.value;
+        return liveNbaData;
+      }
+
       try {
         console.log('Fetching live NBA data from ESPN API...');
         
         // Try ESPN NBA standings API (primary)
-        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings', {
+        const response = await fetchWithTimeout('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/standings', {
           headers: {
             'Accept': 'application/json'
           }
-        });
+        }, SPORTS_REQUEST_TIMEOUT_MS);
         
         if (response.ok) {
           const data = await response.json();
@@ -1433,6 +1491,7 @@
             console.log('ESPN Primary - Sample division records:', sampleDivRecords);
             console.log(`ESPN Primary - Division records available: ${nbaDivisionRecordsAvailable}`);
             
+            cachedNbaStandings = { value: liveNbaData, timestamp: Date.now() };
             console.log(`Successfully fetched ${liveNbaData.length} NBA teams`);
             return liveNbaData;
           }
@@ -1444,10 +1503,15 @@
       // Try alternative APIs
       const balldontlieData = await fetchNbaFromBalldontlie();
       if (balldontlieData && balldontlieData.length > 0) {
+        cachedNbaStandings = { value: balldontlieData, timestamp: Date.now() };
         return balldontlieData;
       }
       
-      return await fetchNbaAlternativeData();
+      const alternativeData = await fetchNbaAlternativeData();
+      if (alternativeData && alternativeData.length > 0) {
+        cachedNbaStandings = { value: alternativeData, timestamp: Date.now() };
+      }
+      return alternativeData;
     }
     
     // Fetch NBA data from BALLDONTLIE API (free, no API key required)
@@ -2712,17 +2776,24 @@
 
     // Fetch live game scores from ESPN APIs
     async function fetchLiveGameScores() {
+      const now = Date.now();
+      if (cachedTickerScores && now - cachedTickerScores.timestamp < TICKER_CACHE_TTL_MS) {
+        liveGameScores = cachedTickerScores.value;
+        currentTickerGames = liveGameScores.map(score => score.gameId).filter(id => id);
+        return liveGameScores;
+      }
+
       const scores = [];
       
       try {
         // Fetch NFL scores
         console.log('Fetching live NFL scores...');
-        const nflResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard', {
+        const nflResponse = await fetchWithTimeout('https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard', {
           headers: {
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
           }
-        });
+        }, SPORTS_REQUEST_TIMEOUT_MS);
         
         if (nflResponse.ok) {
           const nflData = await nflResponse.json();
@@ -2819,12 +2890,12 @@
       try {
         // Fetch NBA scores
         console.log('Fetching live NBA scores...');
-        const nbaResponse = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', {
+        const nbaResponse = await fetchWithTimeout('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', {
           headers: {
             'Accept': 'application/json',
             'User-Agent': 'Mozilla/5.0 (compatible; Dashboard/1.0)'
           }
-        });
+        }, SPORTS_REQUEST_TIMEOUT_MS);
         
         if (nbaResponse.ok) {
           const nbaData = await nbaResponse.json();
@@ -2917,6 +2988,7 @@
       // If we got live scores, use them; otherwise use fallback
       if (scores.length > 0) {
         liveGameScores = scores;
+        cachedTickerScores = { value: scores, timestamp: Date.now() };
         // Update current ticker games with game IDs
         currentTickerGames = scores.map(score => score.gameId).filter(id => id);
         console.log(`Fetched ${scores.length} live game scores`);
