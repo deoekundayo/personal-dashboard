@@ -66,7 +66,92 @@
        .ticker-countdown-text{
          font-size:1.2rem;
          font-weight:600;
+        position:relative;
+        top:-8px;
        }
+      .ticker-status-center{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        text-align:center;
+        width:100%;
+      }
+      .countdown-seconds-alert{
+        color:#dc3545 !important;
+      }
+      .countdown-seconds-large{
+        font-size:4.2rem;
+        line-height:1;
+      }
+      .countdown-seconds-fixed{
+        display:inline-flex;
+        justify-content:center;
+        align-items:center;
+        width:120px;
+        letter-spacing:0;
+        font-variant-numeric:tabular-nums;
+        font-feature-settings:"tnum" 1;
+      }
+      .countdown-digits-fixed{
+        display:inline-flex;
+        justify-content:center;
+        align-items:center;
+        width:1.36em;
+      }
+      .countdown-digit-slot{
+        width:0.68em;
+        display:inline-flex;
+        justify-content:center;
+        align-items:center;
+        text-align:center;
+      }
+      .countdown-digit-hidden{
+        visibility:hidden;
+      }
+      .countdown-transition-shell{
+        display:inline-flex;
+        justify-content:center;
+        align-items:center;
+        min-height:4.2rem;
+      }
+      .ticker-alert-text{
+        color:#dc3545;
+        font-weight:700;
+        font-size:2.1rem;
+        line-height:1;
+        font-family:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        letter-spacing:0.06em;
+        text-transform:uppercase;
+        text-shadow:0 1px 0 rgba(0,0,0,0.18);
+      }
+      #scoreTickerSection::before{
+        content:'';
+        position:absolute;
+        inset:0;
+        background-repeat:no-repeat;
+        background-position:center;
+        background-size:240px auto;
+        opacity:0;
+        pointer-events:none;
+        z-index:0;
+      }
+      #scoreTickerSection.ticker-countdown-active{
+        background-color:#e8f3ff;
+      }
+      #scoreTickerSection.ticker-countdown-active::before{
+        opacity:0.13;
+      }
+      #scoreTickerSection > *{
+        position:relative;
+        z-index:1;
+      }
+      #scoreTickerSection.ticker-bg-nfl::before{
+        background-image:url('https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/National_Football_League_logo.svg/250px-National_Football_League_logo.svg.png');
+      }
+      #scoreTickerSection.ticker-bg-nba::before{
+        background-image:url('https://logos-world.net/wp-content/uploads/2020/11/National-Basketball-Association-Logo-1969-2017.png');
+        background-size:auto 112%;
+      }
   </style>
 </head>
 <body>
@@ -147,7 +232,7 @@
             </div>
            
             <div id="liveTicker" style="font-size:1.6rem;font-weight:700;margin-bottom:2px;line-height:1.2;min-height:48px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;">Loading scores...</div>
-            <div id="tickerSubtitle" style="font-size:1rem;color:#6c757d;min-height:18px;margin-top:0;">Loading...</div>
+            <div id="tickerSubtitle" class="ticker-status-center" style="font-size:1rem;color:#6c757d;min-height:18px;margin-top:0;">Loading...</div>
           </div>
           
           <!-- Player Stats Section (Hidden by default, shown only when game is over) -->
@@ -2232,6 +2317,96 @@
       return `${days}<span class="countdown-unit">d</span> ${hours}<span class="countdown-unit">h</span> ${minutes}<span class="countdown-unit">m</span> ${seconds}<span class="countdown-unit">s</span>`;
     }
 
+    function formatNflTickerCountdown(remainingMs) {
+      const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      if (totalSeconds === 0) {
+        return {
+          isStartNow: true,
+          html: '<span class="countdown-transition-shell"><span class="ticker-countdown-text ticker-alert-text">THE NFL STARTS NOW.</span></span>'
+        };
+      }
+
+      if (totalSeconds <= 60) {
+        const displaySeconds = String(totalSeconds);
+        return {
+          isStartNow: false,
+          html: `<span class="countdown-transition-shell"><span class="ticker-countdown-text"><span class="countdown-digital countdown-seconds-alert countdown-seconds-large countdown-seconds-fixed">${displaySeconds}</span></span></span>`
+        };
+      }
+
+      return {
+        isStartNow: false,
+        html: `<span class="ticker-countdown-text" style="color:#6c757d">Next NFL season starts in <span class="countdown-digital">${formatCountdown(remainingMs)}</span></span>`
+      };
+    }
+
+    function renderNflTickerCountdownState(tickerElement, tickerSubtitle, remainingMs) {
+      const nflCountdownDisplay = formatNflTickerCountdown(remainingMs);
+      tickerElement.textContent = '';
+      tickerElement.style.color = '#6c757d';
+      if (tickerSubtitle) {
+        tickerSubtitle.classList.add('ticker-status-center');
+        tickerSubtitle.innerHTML = nflCountdownDisplay.html;
+      }
+    }
+
+    function formatNbaTickerCountdown(remainingMs) {
+      const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      if (totalSeconds === 0) {
+        return {
+          isStartNow: true,
+          html: '<span class="countdown-transition-shell"><span class="ticker-countdown-text ticker-alert-text">THE NBA STARTS NOW.</span></span>'
+        };
+      }
+
+      if (totalSeconds <= 60) {
+        const displaySeconds = String(totalSeconds);
+        return {
+          isStartNow: false,
+          html: `<span class="countdown-transition-shell"><span class="ticker-countdown-text"><span class="countdown-digital countdown-seconds-alert countdown-seconds-large countdown-seconds-fixed">${displaySeconds}</span></span></span>`
+        };
+      }
+
+      return {
+        isStartNow: false,
+        html: `<span class="ticker-countdown-text" style="color:#6c757d">The NBA starts in <span class="countdown-digital">${formatCountdown(remainingMs)}</span></span>`
+      };
+    }
+
+    function renderNbaTickerCountdownState(tickerElement, tickerSubtitle, remainingMs) {
+      const nbaCountdownDisplay = formatNbaTickerCountdown(remainingMs);
+      tickerElement.textContent = '';
+      tickerElement.style.color = '#6c757d';
+      if (tickerSubtitle) {
+        tickerSubtitle.classList.add('ticker-status-center');
+        tickerSubtitle.innerHTML = nbaCountdownDisplay.html;
+      }
+    }
+
+    function renderStandingsStartNowState(league) {
+      if (league === 'NFL') {
+        const nflBody = document.getElementById('nflBody');
+        const nflSubtitle = document.getElementById('nflSubtitle');
+        if (nflBody) {
+          nflBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="font-weight:700;color:#dc3545;">THE NFL STARTS NOW.</td></tr>';
+        }
+        if (nflSubtitle) {
+          nflSubtitle.innerHTML = '<span style="color:#dc3545;font-weight:700;">Standings loading...</span>';
+        }
+        return;
+      }
+      if (league === 'NBA') {
+        const nbaBody = document.getElementById('nbaBody');
+        const nbaSubtitle = document.getElementById('nbaSubtitle');
+        if (nbaBody) {
+          nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="font-weight:700;color:#dc3545;">THE NBA STARTS NOW.</td></tr>';
+        }
+        if (nbaSubtitle) {
+          nbaSubtitle.innerHTML = '<span style="color:#dc3545;font-weight:700;">Standings loading...</span>';
+        }
+      }
+    }
+
     async function populateSports(){
       // NFL Section
       const nflBody = document.getElementById('nflBody');
@@ -2242,11 +2417,20 @@
       
       const nflData = await fetchLiveNflData();
       nflBody.innerHTML = '';
+      const nflNowMs = Date.now();
+      const nflSeasonStartMs = getNflSeasonStartDate(new Date().getFullYear()).getTime();
+      const nflTransitionEndsAt = nflSeasonStartMs + 3000;
+      const nflInStartTransition = nflNowMs >= nflSeasonStartMs && nflNowMs < nflTransitionEndsAt;
       
       if (isNflOffseasonNow()) {
         liveNflData = [];
         nflBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No stats available.</td></tr>';
         nflSubtitle.innerHTML = '<span style="color:#6c757d">No stats available.</span>';
+      } else if (nflInStartTransition) {
+        liveNflData = [];
+        nflBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="font-weight:700;color:#dc3545;">THE NFL STARTS NOW.</td></tr>';
+        nflSubtitle.innerHTML = '<span style="color:#dc3545;font-weight:700;">Standings loading...</span>';
+        scheduleStandingsRefreshAfterTransition('NFL', (nflTransitionEndsAt - nflNowMs) + 100);
       } else if (nflData && nflData.length > 0) {
         nflData.forEach((r, index) => {
           const tr = document.createElement('tr');
@@ -2295,11 +2479,30 @@
           nbaTableHead.innerHTML = '<th>Team</th><th>W</th><th>L</th><th>GB</th><th>PTS</th><th>OPP</th><th>Streak</th><th>Home</th><th>Road</th>';
         }
       }
+      const nbaNowMs = Date.now();
+      const nbaSeasonStartMs = getNbaSeasonStartDate(new Date().getFullYear()).getTime();
+      const nbaTransitionEndsAt = nbaSeasonStartMs + 3000;
+      const nbaInStartTransition = nbaNowMs >= nbaSeasonStartMs && nbaNowMs < nbaTransitionEndsAt;
+      const nbaInDemoCountdown = nbaTickerDemo.enabled && nbaTickerDemo.secondsRemaining > 0;
+      const nbaInDemoStartTransition = nbaTickerDemo.startNowShownAt !== null && (nbaNowMs - nbaTickerDemo.startNowShownAt) < 3000;
       
-      if (isNbaOffseasonNow()) {
+      if (nbaInDemoCountdown) {
         liveNbaData = [];
         nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No stats available.</td></tr>';
         nbaSubtitle.innerHTML = '<span style="color:#6c757d">No stats available.</span>';
+      } else if (nbaInDemoStartTransition) {
+        liveNbaData = [];
+        nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="font-weight:700;color:#dc3545;">THE NBA STARTS NOW.</td></tr>';
+        nbaSubtitle.innerHTML = '<span style="color:#dc3545;font-weight:700;">Standings loading...</span>';
+      } else if (isNbaOffseasonNow()) {
+        liveNbaData = [];
+        nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No stats available.</td></tr>';
+        nbaSubtitle.innerHTML = '<span style="color:#6c757d">No stats available.</span>';
+      } else if (nbaInStartTransition) {
+        liveNbaData = [];
+        nbaBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="font-weight:700;color:#dc3545;">THE NBA STARTS NOW.</td></tr>';
+        nbaSubtitle.innerHTML = '<span style="color:#dc3545;font-weight:700;">Standings loading...</span>';
+        scheduleStandingsRefreshAfterTransition('NBA', (nbaTransitionEndsAt - nbaNowMs) + 100);
       } else if (nbaData && nbaData.length > 0) {
         nbaData.forEach((r, index) => {
           const tr = document.createElement('tr');
@@ -2773,6 +2976,44 @@
     let showPlayerStats = false; // Toggle between scores and player stats
     let nflViewMode = 'standard'; // 'standard' or 'conference' - tracks NFL snapshot view mode
     let nbaViewMode = 'standard'; // 'standard' or 'conference' - tracks NBA snapshot view mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const nflTickerDemoEnabled = urlParams.get('nflTickerDemo') === '1';
+    const nflTickerDemoSecondsParam = Number.parseInt(urlParams.get('nflTickerDemoSeconds') || '', 10);
+    const nflTickerDemoDurationSeconds = Number.isFinite(nflTickerDemoSecondsParam)
+      ? Math.min(600, Math.max(1, nflTickerDemoSecondsParam))
+      : 75;
+    const nflTickerDemo = nflTickerDemoEnabled
+      ? { enabled: true, secondsRemaining: nflTickerDemoDurationSeconds, lastTickAt: Date.now(), startNowShownAt: null }
+      : { enabled: false, secondsRemaining: 0, lastTickAt: null, startNowShownAt: null };
+    const nbaTickerDemoEnabled = urlParams.get('nbaTickerDemo') === '1';
+    const nbaTickerDemoSecondsParam = Number.parseInt(urlParams.get('nbaTickerDemoSeconds') || '', 10);
+    const nbaTickerDemoDurationSeconds = Number.isFinite(nbaTickerDemoSecondsParam)
+      ? Math.min(600, Math.max(1, nbaTickerDemoSecondsParam))
+      : 75;
+    const nbaTickerDemo = nbaTickerDemoEnabled
+      ? { enabled: true, secondsRemaining: nbaTickerDemoDurationSeconds, lastTickAt: Date.now(), startNowShownAt: null }
+      : { enabled: false, secondsRemaining: 0, lastTickAt: null, startNowShownAt: null };
+    let nflStandingsTransitionTimeoutId = null;
+    let nbaStandingsTransitionTimeoutId = null;
+
+    function scheduleStandingsRefreshAfterTransition(league, delayMs) {
+      const clampedDelay = Math.max(50, Math.floor(delayMs));
+      if (league === 'NFL') {
+        if (nflStandingsTransitionTimeoutId !== null) return;
+        nflStandingsTransitionTimeoutId = setTimeout(() => {
+          nflStandingsTransitionTimeoutId = null;
+          populateSports();
+        }, clampedDelay);
+        return;
+      }
+      if (league === 'NBA') {
+        if (nbaStandingsTransitionTimeoutId !== null) return;
+        nbaStandingsTransitionTimeoutId = setTimeout(() => {
+          nbaStandingsTransitionTimeoutId = null;
+          populateSports();
+        }, clampedDelay);
+      }
+    }
 
     // Fetch live game scores from ESPN APIs
     async function fetchLiveGameScores() {
@@ -3243,7 +3484,100 @@
     function updateLiveTicker() {
       const tickerElement = document.getElementById('liveTicker');
       const tickerSubtitle = document.getElementById('tickerSubtitle');
+      const tickerCard = document.getElementById('scoreTickerSection');
       if (!tickerElement) return;
+      const selectedLeague = window.selectedLeague || 'NFL';
+      const setCountdownBackgroundActive = (isActive) => {
+        if (tickerCard) tickerCard.classList.toggle('ticker-countdown-active', isActive);
+      };
+      if (tickerCard) {
+        tickerCard.classList.remove('ticker-bg-nfl', 'ticker-bg-nba');
+        if (selectedLeague === 'NFL') {
+          tickerCard.classList.add('ticker-bg-nfl');
+        } else if (selectedLeague === 'NBA') {
+          tickerCard.classList.add('ticker-bg-nba');
+        }
+      }
+      setCountdownBackgroundActive(false);
+      if (selectedLeague === 'NFL' && nflTickerDemo.enabled) {
+        const now = Date.now();
+        if (nflTickerDemo.lastTickAt !== null && nflTickerDemo.secondsRemaining > 0) {
+          const elapsedSeconds = Math.floor((now - nflTickerDemo.lastTickAt) / 1000);
+          if (elapsedSeconds > 0) {
+            // Consume all fully elapsed seconds to avoid visible "stuck" values from timer jitter.
+            nflTickerDemo.secondsRemaining = Math.max(0, nflTickerDemo.secondsRemaining - elapsedSeconds);
+            nflTickerDemo.lastTickAt += elapsedSeconds * 1000;
+          }
+        }
+        if (nflTickerDemo.secondsRemaining === 0) {
+          if (nflTickerDemo.startNowShownAt === null) {
+            nflTickerDemo.startNowShownAt = now;
+            renderStandingsStartNowState('NFL');
+            scheduleStandingsRefreshAfterTransition('NFL', 3100);
+          }
+          if (now - nflTickerDemo.startNowShownAt < 3000) {
+            setCountdownBackgroundActive(true);
+            renderNflTickerCountdownState(tickerElement, tickerSubtitle, 0);
+            return;
+          }
+          // End demo transition after 3 seconds and fall back to normal ticker behavior.
+          nflTickerDemo.enabled = false;
+        }
+        if (nflTickerDemo.enabled) {
+          const remainingMs = nflTickerDemo.secondsRemaining * 1000;
+          setCountdownBackgroundActive(true);
+          renderNflTickerCountdownState(tickerElement, tickerSubtitle, remainingMs);
+          return;
+        }
+      }
+      if (selectedLeague === 'NBA' && nbaTickerDemo.enabled) {
+        const now = Date.now();
+        if (nbaTickerDemo.lastTickAt !== null && nbaTickerDemo.secondsRemaining > 0) {
+          const elapsedSeconds = Math.floor((now - nbaTickerDemo.lastTickAt) / 1000);
+          if (elapsedSeconds > 0) {
+            nbaTickerDemo.secondsRemaining = Math.max(0, nbaTickerDemo.secondsRemaining - elapsedSeconds);
+            nbaTickerDemo.lastTickAt += elapsedSeconds * 1000;
+          }
+        }
+        if (nbaTickerDemo.secondsRemaining === 0) {
+          if (nbaTickerDemo.startNowShownAt === null) {
+            nbaTickerDemo.startNowShownAt = now;
+            renderStandingsStartNowState('NBA');
+            scheduleStandingsRefreshAfterTransition('NBA', 3100);
+          }
+          if (now - nbaTickerDemo.startNowShownAt < 3000) {
+            setCountdownBackgroundActive(true);
+            renderNbaTickerCountdownState(tickerElement, tickerSubtitle, 0);
+            return;
+          }
+          // End demo transition after 3 seconds and fall back to normal ticker behavior.
+          nbaTickerDemo.enabled = false;
+        }
+        if (nbaTickerDemo.enabled) {
+          const remainingMs = nbaTickerDemo.secondsRemaining * 1000;
+          setCountdownBackgroundActive(true);
+          renderNbaTickerCountdownState(tickerElement, tickerSubtitle, remainingMs);
+          return;
+        }
+      }
+      if (selectedLeague === 'NFL') {
+        const now = Date.now();
+        const nflSeasonStartMs = getNflSeasonStartDate(new Date().getFullYear()).getTime();
+        if (now >= nflSeasonStartMs && now < nflSeasonStartMs + 3000) {
+          setCountdownBackgroundActive(true);
+          renderNflTickerCountdownState(tickerElement, tickerSubtitle, 0);
+          return;
+        }
+      }
+      if (selectedLeague === 'NBA') {
+        const now = Date.now();
+        const nbaSeasonStartMs = getNbaSeasonStartDate(new Date().getFullYear()).getTime();
+        if (now >= nbaSeasonStartMs && now < nbaSeasonStartMs + 3000) {
+          setCountdownBackgroundActive(true);
+          renderNbaTickerCountdownState(tickerElement, tickerSubtitle, 0);
+          return;
+        }
+      }
       
       // Always show game scores
       if (liveGameScores.length === 0) {
@@ -3253,7 +3587,6 @@
       }
       
       // Filter scores by selected league
-      const selectedLeague = window.selectedLeague || 'NFL';
       let filteredScores;
       
       // Special logic for NFL: Show only Monday Night Football when it's live
@@ -3317,18 +3650,16 @@
           const nflCountdown = getNflOffseasonCountdown();
           if (nflCountdown.active) {
             const remainingMs = nflCountdown.target.getTime() - Date.now();
-            tickerElement.textContent = 'No scores available';
-            tickerElement.style.color = '#6c757d';
-            if (tickerSubtitle) tickerSubtitle.innerHTML = `<span class="ticker-countdown-text" style="color:#6c757d">Next NFL season starts in <span class="countdown-digital">${formatCountdown(remainingMs)}</span></span>`;
+            setCountdownBackgroundActive(true);
+            renderNflTickerCountdownState(tickerElement, tickerSubtitle, remainingMs);
             return;
           }
         } else if (selectedLeague === 'NBA') {
           const nbaCountdown = getNbaOffseasonCountdown();
           if (nbaCountdown.active) {
             const remainingMs = nbaCountdown.target.getTime() - Date.now();
-            tickerElement.textContent = 'No scores available';
-            tickerElement.style.color = '#6c757d';
-            if (tickerSubtitle) tickerSubtitle.innerHTML = `<span class="ticker-countdown-text" style="color:#6c757d">Next NBA season starts in <span class="countdown-digital">${formatCountdown(remainingMs)}</span></span>`;
+            setCountdownBackgroundActive(true);
+            renderNbaTickerCountdownState(tickerElement, tickerSubtitle, remainingMs);
             return;
           }
         }
